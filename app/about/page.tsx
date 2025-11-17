@@ -4,7 +4,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen pt-16 pb-20">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <Link href="/" className="text-blue-400 hover:text-blue-300 transition-colors mb-8 inline-block flex items-center gap-2">
+        <Link href="/" className="text-green-400 hover:text-red-400 transition-colors mb-8 inline-block flex items-center gap-2">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
           </svg>
@@ -29,7 +29,7 @@ export default function AboutPage() {
 
             <ol className="list-none space-y-6 text-slate-300">
               <li className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-blue-400 font-bold">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 font-bold">
                   1
                 </div>
                 <div>
@@ -41,7 +41,7 @@ export default function AboutPage() {
                 </div>
               </li>
               <li className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-blue-400 font-bold">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 font-bold">
                   2
                 </div>
                 <div>
@@ -53,7 +53,7 @@ export default function AboutPage() {
                 </div>
               </li>
               <li className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-blue-400 font-bold">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 font-bold">
                   3
                 </div>
                 <div>
@@ -65,7 +65,7 @@ export default function AboutPage() {
                 </div>
               </li>
               <li className="flex gap-4">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 flex items-center justify-center text-blue-400 font-bold">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/20 border border-green-500/50 flex items-center justify-center text-green-400 font-bold">
                   4
                 </div>
                 <div>
@@ -83,13 +83,13 @@ export default function AboutPage() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-blue-500/50 transition-all duration-300">
+              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300">
                 <h3 className="font-bold text-white mb-2 text-lg font-heading">Kalshi</h3>
                 <p className="text-sm text-slate-400">
                   Regulated US prediction markets covering politics, economics, and current events.
                 </p>
               </div>
-              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-purple-500/50 transition-all duration-300">
+              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-green-500/50 transition-all duration-300">
                 <h3 className="font-bold text-white mb-2 text-lg font-heading">Polymarket</h3>
                 <p className="text-sm text-slate-400">
                   Crypto-native prediction market with high liquidity and diverse markets.
@@ -101,7 +101,7 @@ export default function AboutPage() {
                   Community-driven platform with unique market creation and trading features.
                 </p>
               </div>
-              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-orange-500/50 transition-all duration-300">
+              <div className="glass rounded-xl p-6 border border-slate-700/50 hover:border-red-500/50 transition-all duration-300">
                 <h3 className="font-bold text-white mb-2 text-lg font-heading">PredictIt</h3>
                 <p className="text-sm text-slate-400">
                   Popular platform focused on political predictions and current events.
@@ -153,9 +153,9 @@ export default function AboutPage() {
               </li>
             </ul>
 
-            <div className="mt-10 p-6 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-              <p className="text-sm text-blue-300">
-                <strong className="text-blue-200">Note:</strong> ProphitLine is currently in development. Market data is
+            <div className="mt-10 p-6 bg-gradient-to-r from-green-500/10 to-red-500/10 border border-green-500/30 rounded-xl">
+              <p className="text-sm text-green-300">
+                <strong className="text-green-200">Note:</strong> ProphitLine is currently in development. Market data is
                 simulated for demonstration purposes. Real API integrations are coming soon.
               </p>
             </div>

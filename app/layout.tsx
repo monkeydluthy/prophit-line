@@ -34,12 +34,12 @@ export default function RootLayout({
             {/* Logo - Left side of screen */}
             <Link href="/" className="flex items-center absolute" style={{ left: '10vw', background: 'transparent' }}>
               <Image 
-                src="/logo.png" 
+                src="/final-logo.png" 
                 alt="ProphitLine" 
                 width={70} 
                 height={70} 
                 className="w-auto"
-                style={{ height: '70px', width: 'auto', background: 'transparent', mixBlendMode: 'screen' }}
+                style={{ height: '70px', width: 'auto', background: 'transparent' }}
                 priority
               />
             </Link>
@@ -59,56 +59,83 @@ export default function RootLayout({
         <main className="pt-20 relative z-10 min-h-screen w-full">
           {children}
         </main>
-        <footer className="relative z-10 bg-slate-900/50 border-t border-slate-800 w-full py-16">
-          <div className="w-full flex justify-between" style={{ paddingLeft: '10vw', paddingRight: '10vw' }}>
-            {/* Brand column */}
-            <div className="flex-1">
-              <div className="mb-4">
-                <Image 
-                  src="/logo.png" 
-                  alt="ProphitLine" 
-                  width={160} 
-                  height={45} 
-                  className="h-10 w-auto bg-transparent"
-                  style={{ background: 'transparent' }}
-                />
+        <footer className="relative z-10 bg-slate-900/50 border-t border-slate-800/50 w-full" style={{ paddingTop: '80px', paddingBottom: '40px' }}>
+          <div className="w-full" style={{ paddingLeft: '10vw', paddingRight: '10vw' }}>
+            {/* Main footer content */}
+            <div className="flex flex-col md:flex-row justify-between gap-16" style={{ marginBottom: '101px' }}>
+              {/* Brand column */}
+              <div className="flex-1 max-w-md">
+                <div className="mb-6">
+                  <Image 
+                    src="/final-logo.png" 
+                    alt="ProphitLine" 
+                    width={160} 
+                    height={45} 
+                    className="h-11 w-auto bg-transparent"
+                    style={{ background: 'transparent' }}
+                  />
+                </div>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Find the best odds across prediction markets. Compare prices from top platforms instantly.
+                </p>
               </div>
-              <p className="text-slate-400 text-sm max-w-md">
-                Find the best odds across prediction markets. Compare prices from top platforms instantly.
+              
+              {/* Markets column */}
+              <div className="flex-1 max-w-[200px]">
+                <h4 className="text-white font-semibold text-xs uppercase tracking-widest mb-5 font-heading">Markets</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Kalshi
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Polymarket
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Manifold Markets
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      PredictIt
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+              
+              {/* Legal column */}
+              <div className="flex-1 max-w-[200px]">
+                <h4 className="text-white font-semibold text-xs uppercase tracking-widest mb-5 font-heading">Legal</h4>
+                <ul className="space-y-3">
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Terms of Service
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Privacy Policy
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="#" className="text-slate-400 hover:text-white transition-colors text-sm">
+                      Disclaimer
+                    </Link>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            
+            {/* Bottom bar */}
+            <div className="border-t border-slate-800/30" style={{ paddingTop: '45px' }}>
+              <p className="text-center text-slate-500 text-xs">
+                © 2024 ProphitLine. All rights reserved.
               </p>
             </div>
-            
-            {/* Markets column */}
-            <div className="flex-1 flex justify-center">
-              <div>
-                <h4 className="text-white font-semibold mb-4">MARKETS</h4>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Kalshi</Link></li>
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Polymarket</Link></li>
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Manifold Markets</Link></li>
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">PredictIt</Link></li>
-                </ul>
-              </div>
-            </div>
-            
-            {/* Legal column */}
-            <div className="flex-1 flex justify-end">
-              <div>
-                <h4 className="text-white font-semibold mb-4">LEGAL</h4>
-                <ul className="space-y-3">
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Terms of Service</Link></li>
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Privacy Policy</Link></li>
-                  <li><Link href="#" className="text-slate-400 hover:text-blue-400 transition-colors text-sm">Disclaimer</Link></li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          
-          {/* Bottom bar */}
-          <div className="pt-8 border-t border-slate-800 mt-12" style={{ paddingLeft: '10vw', paddingRight: '10vw' }}>
-            <p className="text-center text-slate-500 text-sm">
-              © 2024 ProphitLine. All rights reserved.
-            </p>
           </div>
         </footer>
       </body>

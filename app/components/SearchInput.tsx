@@ -62,13 +62,13 @@ export default function SearchInput({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={displayPlaceholder}
           disabled={isLoading}
-          className="w-full h-16 md:h-20 px-4 text-lg md:text-xl rounded-xl bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-slate-400 placeholder:text-center focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 font-semibold text-center"
+          className="w-full h-16 md:h-20 px-4 text-lg md:text-xl rounded-xl bg-slate-800/50 border border-slate-700/50 text-white placeholder:text-slate-400 placeholder:text-center focus:outline-none focus:border-green-500/50 focus:ring-2 focus:ring-green-500/20 transition-all duration-300 font-semibold text-center"
         />
       </div>
       <button
         type="submit"
         disabled={isLoading || !query.trim()}
-        className="w-full max-w-md mx-auto h-14 text-lg font-semibold bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/50 flex items-center justify-center gap-2 animate-pulse disabled:animate-none"
+        className="w-full max-w-md mx-auto h-14 text-lg font-semibold bg-gradient-to-r from-green-500 to-red-500 hover:from-green-600 hover:to-red-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white rounded-xl transition-all duration-300 hover:shadow-lg hover:shadow-green-500/50 flex items-center justify-center gap-2 animate-pulse disabled:animate-none"
       >
         {isLoading ? (
           <>
@@ -113,18 +113,18 @@ export default function SearchInput({
         )}
       </button>
       {isLoading && (
-        <div className="flex items-center justify-center gap-2 text-blue-400 text-sm">
+        <div className="flex items-center justify-center gap-2 text-green-400 text-sm">
           <div className="flex gap-1">
             <div
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+              className="w-2 h-2 bg-green-400 rounded-full animate-bounce"
               style={{ animationDelay: '0ms' }}
             />
             <div
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+              className="w-2 h-2 bg-green-400 rounded-full animate-bounce"
               style={{ animationDelay: '150ms' }}
             />
             <div
-              className="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+              className="w-2 h-2 bg-red-400 rounded-full animate-bounce"
               style={{ animationDelay: '300ms' }}
             />
           </div>

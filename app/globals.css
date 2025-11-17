@@ -4,8 +4,8 @@
 :root {
   --background: #0f172a;
   --foreground: #f1f5f9;
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
+  --primary: #10b981;
+  --primary-hover: #059669;
   --success: #10b981;
   --danger: #ef4444;
   --card-bg: rgba(30, 41, 59, 0.6);
@@ -54,7 +54,7 @@ body {
   position: absolute;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%);
   border-radius: 50%;
   top: -250px;
   left: -250px;
@@ -66,7 +66,7 @@ body {
   position: absolute;
   width: 400px;
   height: 400px;
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 70%);
   border-radius: 50%;
   bottom: -200px;
   right: -200px;
@@ -115,11 +115,11 @@ body {
 
 /* Glow effects */
 .glow-blue {
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
 }
 
 .glow-blue-strong {
-  box-shadow: 0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.5), 0 0 60px rgba(239, 68, 68, 0.2);
 }
 
 .glow-green {
@@ -161,10 +161,10 @@ body {
 /* Pulse animation */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 40px rgba(239, 68, 68, 0.6);
   }
 }
 
@@ -203,12 +203,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.5), rgba(239, 68, 68, 0.5));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.7);
+  background: linear-gradient(to bottom, rgba(16, 185, 129, 0.7), rgba(239, 68, 68, 0.7));
 }
 
 /* Ensure images maintain transparency */
@@ -217,7 +217,7 @@ img {
   mix-blend-mode: normal !important;
 }
 
-img[src*="logo"] {
+img[src*="logo"], img[src*="final-logo"] {
   background: transparent !important;
   mix-blend-mode: normal !important;
 }
