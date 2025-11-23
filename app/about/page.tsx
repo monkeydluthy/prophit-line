@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center" style={{ paddingTop: '140px', paddingBottom: '140px' }}>
+    <div className="min-h-screen flex flex-col items-center" style={{ paddingTop: '140px', paddingBottom: '140px', backgroundColor: '#0a0a0a' }}>
       <div className="w-full max-w-6xl px-6">
         <Link href="/" className="text-slate-400 hover:text-green-400 transition-colors inline-flex items-center gap-2 text-sm font-medium" style={{ marginBottom: '60px' }}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -28,7 +28,7 @@ export default function AboutPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '40px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '40px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/50 flex items-center justify-center text-green-400 font-bold text-2xl" style={{ marginBottom: '28px' }}>
                 1
               </div>
@@ -40,7 +40,7 @@ export default function AboutPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '40px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '40px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/50 flex items-center justify-center text-green-400 font-bold text-2xl" style={{ marginBottom: '28px' }}>
                 2
               </div>
@@ -52,7 +52,7 @@ export default function AboutPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '40px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '40px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/50 flex items-center justify-center text-green-400 font-bold text-2xl" style={{ marginBottom: '28px' }}>
                 3
               </div>
@@ -64,7 +64,7 @@ export default function AboutPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '40px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '40px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <div className="w-16 h-16 rounded-full bg-green-500/10 border-2 border-green-500/50 flex items-center justify-center text-green-400 font-bold text-2xl" style={{ marginBottom: '28px' }}>
                 4
               </div>
@@ -85,7 +85,7 @@ export default function AboutPage() {
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '32px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
                 Kalshi
               </h3>
@@ -93,7 +93,7 @@ export default function AboutPage() {
                 Regulated US prediction markets covering politics, economics, and current events.
               </p>
             </div>
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '32px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
                 Polymarket
               </h3>
@@ -101,7 +101,7 @@ export default function AboutPage() {
                 Crypto-native prediction market with high liquidity and diverse markets.
               </p>
             </div>
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '32px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
                 Manifold Markets
               </h3>
@@ -109,7 +109,7 @@ export default function AboutPage() {
                 Community-driven platform with unique market creation and trading features.
               </p>
             </div>
-            <div className="bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/30 transition-all duration-300" style={{ padding: '32px' }}>
+            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
                 PredictIt
               </h3>

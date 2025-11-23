@@ -1,31 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import type { ParsedPrediction, MarketResult, SearchResults } from "@/types";
+import { searchMarkets } from "@/app/services/marketService";
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
-
-// Mock data generator for demonstration
-function generateMockMarkets(parsedPrediction: ParsedPrediction): MarketResult[] {
-  const platforms = [
-    { name: "Kalshi", baseOdds: 2.1 },
-    { name: "Polymarket", baseOdds: 2.3 },
-    { name: "Manifold Markets", baseOdds: 2.0 },
-    { name: "PredictIt", baseOdds: 2.4 },
-  ];
-
-  return platforms.map((platform, index) => ({
-    platform: platform.name,
-    marketTitle: `${parsedPrediction.event} - ${parsedPrediction.outcome}`,
-    outcome: parsedPrediction.outcome,
-    odds: platform.baseOdds + (Math.random() * 0.4 - 0.2), // Add some variation
-    price: 1 / (platform.baseOdds + (Math.random() * 0.4 - 0.2)),
-    liquidity: Math.floor(Math.random() * 50000) + 10000,
-    volume: Math.floor(Math.random() * 200000) + 50000,
-    link: `https://${platform.name.toLowerCase().replace(/\s+/g, "")}.com/market/${index + 1}`,
-  })).sort((a, b) => b.odds - a.odds); // Sort by best odds first
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,7 +27,9 @@ export async function POST(request: NextRequest) {
         timeframe: query.includes("end of year") ? "End of year" : undefined,
         conditions: [],
       };
-      const markets = generateMockMarkets(mockParsed);
+      
+      const markets = await searchMarkets(mockParsed);
+      
       return NextResponse.json({
         query,
         parsedPrediction: mockParsed,
@@ -103,8 +85,8 @@ Return only the JSON object, no other text.`,
       };
     }
 
-    // Generate mock market results
-    const markets = generateMockMarkets(parsedPrediction);
+    // Search for real markets
+    const markets = await searchMarkets(parsedPrediction);
 
     const results: SearchResults = {
       query,

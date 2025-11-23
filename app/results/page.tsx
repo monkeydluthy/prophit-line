@@ -5,62 +5,33 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import type { SearchResults, MarketResult } from '@/types';
 
-const platformColors: Record<
-  string,
-  { border: string; bg: string; text: string }
-> = {
-  Kalshi: {
-    border: 'border-green-500/50',
-    bg: 'bg-green-500/10',
-    text: 'text-green-400',
-  },
-  Polymarket: {
-    border: 'border-green-500/50',
-    bg: 'bg-gradient-to-r from-green-500/10 to-red-500/10',
-    text: 'text-green-400',
-  },
-  'Manifold Markets': {
-    border: 'border-green-500/50',
-    bg: 'bg-gradient-to-r from-green-500/10 via-green-400/10 to-red-500/10',
-    text: 'text-green-400',
-  },
-  PredictIt: {
-    border: 'border-red-500/50',
-    bg: 'bg-red-500/10',
-    text: 'text-red-400',
-  },
-};
-
 function SkeletonCard() {
   return (
     <div
-      className="w-full bg-slate-800/60 border border-slate-600/50 rounded-2xl"
-      style={{ padding: '48px' }}
+      className="w-full border rounded-xl"
+      style={{
+        padding: '24px',
+        backgroundColor: '#1a1a1a',
+        borderColor: '#2a2a2a',
+      }}
     >
-      <div
-        className="flex items-center justify-between"
-        style={{ marginBottom: '32px' }}
-      >
-        <div className="skeleton h-7 w-24 rounded-lg" />
-        <div className="skeleton h-6 w-20 rounded-lg" />
+      <div className="flex items-center justify-between mb-4">
+        <div className="skeleton h-6 w-20 rounded-md" />
+        <div className="skeleton h-6 w-16 rounded-md" />
       </div>
-      <div className="skeleton h-6 w-full rounded mb-2" />
-      <div
-        className="skeleton h-6 w-3/4 rounded"
-        style={{ marginBottom: '36px' }}
-      />
-      <div
-        className="skeleton h-32 w-full rounded-xl"
-        style={{ marginBottom: '36px' }}
-      />
-      <div
-        className="flex items-center justify-between"
-        style={{ marginBottom: '36px' }}
-      >
-        <div className="skeleton h-12 w-24 rounded" />
-        <div className="skeleton h-12 w-24 rounded" />
+      <div className="skeleton h-5 w-full rounded mb-2" />
+      <div className="skeleton h-5 w-3/4 rounded mb-4" />
+      <div className="space-y-3 mb-4">
+        <div className="skeleton h-8 w-full rounded" />
+        <div className="skeleton h-8 w-full rounded" />
       </div>
-      <div className="skeleton h-14 w-full rounded-xl" />
+      <div
+        className="flex items-center justify-between pt-3 border-t"
+        style={{ borderColor: '#2a2a2a' }}
+      >
+        <div className="skeleton h-4 w-20 rounded" />
+        <div className="skeleton h-4 w-16 rounded" />
+      </div>
     </div>
   );
 }
@@ -72,7 +43,6 @@ function ResultsContent() {
   const [results, setResults] = useState<SearchResults | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [newQuery, setNewQuery] = useState('');
 
   useEffect(() => {
@@ -109,12 +79,6 @@ function ResultsContent() {
     fetchResults();
   }, [query]);
 
-  const copyLink = () => {
-    navigator.clipboard.writeText(window.location.href);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2000);
-  };
-
   const handleNewSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newQuery.trim()) return;
@@ -144,7 +108,7 @@ function ResultsContent() {
         >
           <div className="skeleton h-16 w-full max-w-2xl rounded-2xl" />
         </div>
-        <div className="w-full max-w-7xl px-6">
+        <div className="w-full max-w-[1600px] mx-auto px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {[1, 2, 3, 4].map((i) => (
               <SkeletonCard key={i} />
@@ -193,95 +157,71 @@ function ResultsContent() {
   return (
     <div
       className="min-h-screen flex flex-col items-center"
-      style={{ paddingTop: '120px', paddingBottom: '120px' }}
+      style={{
+        paddingTop: '100px',
+        paddingBottom: '120px',
+        backgroundColor: '#0a0a0a',
+      }}
     >
-      {/* Prediction Summary */}
-      <div className="w-full text-center px-6" style={{ marginBottom: '70px' }}>
-        <h1
-          className="text-5xl font-bold text-white font-heading"
-          style={{ marginBottom: '30px' }}
-        >
-          {results.query}
-        </h1>
-        <div className="flex items-center justify-center gap-4 text-sm text-slate-400">
-          <span>
-            Found {results.markets.length}{' '}
-            {results.markets.length === 1 ? 'market' : 'markets'}
-          </span>
-          <span>•</span>
-          <span>Sorted by best odds</span>
-          <span>•</span>
-          <button
-            onClick={copyLink}
-            className="text-slate-400 hover:text-green-400 transition-colors inline-flex items-center gap-1"
-          >
-            {copiedLink ? (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                Copied
-              </>
-            ) : (
-              <>
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                  />
-                </svg>
-                Share
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-
       {/* Search Bar - Centered */}
       <div
-        className="w-full flex justify-center px-6"
-        style={{ marginBottom: '90px' }}
+        className="w-full flex flex-col items-center px-6 border-b border-[#1f1f1f] bg-[#0a0a0a] sticky top-[80px] z-30 pt-12 pb-12"
+        style={{ marginBottom: '60px' }}
       >
-        <form onSubmit={handleNewSearch} className="w-full max-w-2xl">
-          <div className="relative">
+        <h1 className="text-3xl font-bold text-white mb-6 font-heading text-center">
+          Results for &quot;{results.query}&quot;
+        </h1>
+
+        <form
+          onSubmit={handleNewSearch}
+          className="w-full max-w-3xl relative z-20"
+        >
+          <div className="relative group">
+            <svg
+              className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within:text-green-500 transition-colors"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
             <input
               type="text"
               value={newQuery}
               onChange={(e) => setNewQuery(e.target.value)}
               placeholder="Search for another prediction..."
-              className="w-full h-16 px-6 pr-36 text-base bg-slate-800/50 border border-slate-700/50 rounded-2xl text-white placeholder:text-slate-400 placeholder:text-center focus:border-green-500/50 focus:bg-slate-800/60 focus:outline-none transition-all duration-300"
+              className="w-full pl-14 pr-32 py-4 bg-[#111] border border-[#222] rounded-xl text-white text-base placeholder:text-slate-500 focus:border-green-500/50 focus:ring-1 focus:ring-green-500/20 focus:outline-none transition-all shadow-xl shadow-black/50"
             />
             <button
               type="submit"
               disabled={!newQuery.trim()}
-              className="absolute right-2 top-2 h-12 px-8 bg-linear-to-r from-green-500 to-red-500 hover:from-green-600 hover:to-red-600 disabled:opacity-30 disabled:cursor-not-allowed text-white text-base font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-green-500/25"
+              className="absolute right-2 top-2 bottom-2 px-5 bg-[#222] hover:bg-white hover:text-black text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Search
             </button>
           </div>
         </form>
+
+        <div className="flex items-center gap-6 mt-6 text-sm text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+            {results.markets.length} Markets Found
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+            Sorted by Best Return
+          </div>
+        </div>
       </div>
 
       {/* Results Grid */}
-      <div className="w-full max-w-7xl px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="w-full max-w-[1600px] mx-auto px-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {results.markets.map((market, index) => (
             <MarketCard
               key={index}
@@ -322,7 +262,7 @@ function MarketCard({
   isBestOdds: boolean;
   animationDelay?: number;
 }) {
-  const formatOdds = (odds: number) => odds.toFixed(2);
+  const router = useRouter();
   const formatPrice = (price: number) => (price * 100).toFixed(1);
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', {
@@ -332,87 +272,144 @@ function MarketCard({
       maximumFractionDigits: 0,
     }).format(amount);
 
-  const platformColor =
-    platformColors[market.platform] || platformColors['Kalshi'];
+  const yesPercentage = formatPrice(market.price);
+  const noPercentage = (100 - parseFloat(yesPercentage)).toFixed(1);
+
+  const icon =
+    market.marketTitle.toLowerCase().includes('bitcoin') ||
+    market.marketTitle.toLowerCase().includes('btc')
+      ? '₿'
+      : market.marketTitle.toLowerCase().includes('president') ||
+        market.marketTitle.toLowerCase().includes('election')
+      ? '🇺🇸'
+      : market.marketTitle.toLowerCase().includes('fed') ||
+        market.marketTitle.toLowerCase().includes('rate')
+      ? '🏦'
+      : market.marketTitle.toLowerCase().includes('movie')
+      ? '🎬'
+      : '📈';
 
   return (
     <div
-      className="w-full bg-slate-800/60 border border-slate-600/50 rounded-2xl hover:bg-slate-700/70 hover:border-slate-500/60 hover:shadow-xl hover:shadow-slate-900/50 transition-all duration-300"
+      className="bg-[#131313] border border-[#222] rounded-xl p-8 hover:border-[#333] transition-all cursor-pointer group flex flex-col h-full relative shadow-sm min-h-[440px]"
       style={{
         animation: `fadeInUp 0.6s ease-out forwards`,
         animationDelay: `${animationDelay}ms`,
         opacity: 0,
-        padding: '48px',
       }}
+      onClick={() =>
+        router.push(`/market/${encodeURIComponent(market.marketTitle)}`)
+      }
     >
-      {/* Platform and Badge */}
-      <div
-        className="flex items-center justify-between"
-        style={{ marginBottom: '32px' }}
-      >
-        <span
-          className={`px-4 py-2 rounded-lg text-xs font-semibold ${platformColor.bg} ${platformColor.text} border ${platformColor.border}`}
-        >
-          {market.platform}
-        </span>
-        {isBestOdds && (
-          <span className="px-3 py-1.5 bg-green-500/10 text-green-400 rounded-lg text-xs font-semibold border border-green-500/30">
-            ⭐ Best Odds
-          </span>
-        )}
+      {/* Header */}
+      <div className="flex items-start gap-5 mb-8">
+        {/* Icon Box */}
+        <div className="w-16 h-16 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-5xl shrink-0 shadow-sm group-hover:border-[#333] transition-colors">
+          {icon}
+        </div>
+
+        {/* Title & Platform */}
+        <div className="flex-1 min-w-0 pt-1">
+          <div className="flex items-center gap-1.5 mb-3">
+            <div
+              className="flex items-center gap-1.5 rounded bg-[#1d283a] border border-blue-900/30"
+              style={{ padding: '6px 12px' }}
+            >
+              <div className="w-3.5 h-3.5 bg-blue-500 rounded-[2px] flex items-center justify-center shadow-[0_0_6px_rgba(59,130,246,0.5)]">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="w-2.5 h-2.5 text-white transform rotate-45"
+                  fill="currentColor"
+                >
+                  <path d="M12 2L2 12l10 10 10-10L12 2z" />
+                </svg>
+              </div>
+              <span className="text-[11px] font-bold text-blue-400 tracking-wide uppercase">
+                {market.platform}
+              </span>
+            </div>
+            {isBestOdds && (
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded uppercase tracking-wide">
+                Best Odds
+              </span>
+            )}
+          </div>
+          <h3 className="text-white font-bold text-[19px] leading-snug line-clamp-2 group-hover:text-slate-200 transition-colors tracking-tight min-h-[56px]">
+            {market.marketTitle}
+          </h3>
+        </div>
       </div>
 
-      {/* Market Title */}
-      <h3
-        className="text-xl font-semibold text-white leading-relaxed min-h-[56px]"
-        style={{ marginBottom: '36px' }}
-      >
-        {market.marketTitle}
-      </h3>
-
-      {/* Main Odds - Centered and Prominent */}
-      <div
-        className="text-center bg-slate-900/50 rounded-xl border border-slate-600/40"
-        style={{ marginBottom: '36px', padding: '28px 24px' }}
-      >
-        <div className="text-5xl font-bold text-green-400 font-heading mb-2">
-          {formatOdds(market.odds)}x
-        </div>
-        <div className="text-sm text-slate-400">
-          {formatPrice(market.price)}% probability
-        </div>
-      </div>
-
-      {/* Stats - Clean Row */}
-      <div
-        className="flex items-center justify-between text-sm"
-        style={{ marginBottom: '36px' }}
-      >
-        <div>
-          <div className="text-slate-500 text-xs mb-2">Liquidity</div>
-          <div className="text-white font-semibold">
-            {formatCurrency(market.liquidity)}
+      {/* Outcomes List */}
+      <div className="space-y-6 mb-8 grow">
+        {/* Yes Outcome */}
+        <div className="bg-[#18181b] rounded-xl p-6 min-h-[88px] flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white font-bold text-[16px] tracking-tight leading-none">
+              Yes
+            </span>
+            <span className="font-mono text-[18px] font-bold text-white tracking-tight leading-none">
+              {yesPercentage}%
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-[#27272a] rounded-sm overflow-hidden">
+            <div
+              className="h-full rounded-sm bg-emerald-500 transition-all duration-500"
+              style={{ width: `${yesPercentage}%` }}
+            ></div>
           </div>
         </div>
-        <div className="h-8 w-px bg-slate-700/50"></div>
-        <div>
-          <div className="text-slate-500 text-xs mb-2">Volume</div>
-          <div className="text-white font-semibold">
-            {formatCurrency(market.volume)}
+
+        {/* No Outcome */}
+        <div className="bg-[#18181b] rounded-xl p-6 min-h-[88px] flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-white font-bold text-[16px] tracking-tight leading-none">
+              No
+            </span>
+            <span className="font-mono text-[18px] font-bold text-white tracking-tight leading-none">
+              {noPercentage}%
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-[#27272a] rounded-sm overflow-hidden">
+            <div
+              className="h-full rounded-sm bg-rose-500 transition-all duration-500"
+              style={{ width: `${noPercentage}%` }}
+            ></div>
           </div>
         </div>
       </div>
 
-      {/* Action Button */}
-      <a
-        href={market.link}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block w-full bg-linear-to-r from-green-500 to-red-500 hover:from-green-600 hover:to-red-600 text-white font-semibold rounded-xl transition-all duration-300 text-center text-base"
-        style={{ padding: '18px 24px' }}
-      >
-        Place Bet →
-      </a>
+      {/* Footer */}
+      <div className="mt-auto pt-10">
+        <div className="flex items-center justify-between pt-4 border-t border-[#1f1f1f]">
+          <div className="flex items-center gap-1.5">
+            <svg
+              className="w-3.5 h-3.5 text-[#666]"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+              />
+            </svg>
+            <span className="text-[11px] text-[#777] font-bold tracking-tight">
+              {formatCurrency(market.volume)} vol
+            </span>
+          </div>
+          <a
+            href={market.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-[#777] font-bold tracking-tight hover:text-white transition-colors flex items-center gap-1"
+          >
+            Trade <span className="text-[10px]">↗</span>
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

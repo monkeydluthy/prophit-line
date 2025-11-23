@@ -1,317 +1,436 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import CategoryBar from './components/CategoryBar';
 
-const placeholders = [
-  'Bitcoin hits $100k by end of year',
-  'Trump wins 2024 election',
-  'AI achieves AGI by 2025',
-  'Lakers win NBA championship',
-  'Ethereum flips Bitcoin',
+const mockMarkets = [
+  // --- POLYMARKET (Blue) ---
+  {
+    id: 1,
+    platform: 'Polymarket',
+    title: 'Democratic Presidential Nominee 2028',
+    icon: '驴',
+    outcomes: [
+      { name: 'Gavin Newsom', percentage: 38, color: 'green' },
+      { name: 'AOC', percentage: 12, color: 'red' },
+    ],
+    moreOptions: 12,
+    volume: '$312.2M',
+    date: 'Nov 6',
+  },
+  {
+    id: 2,
+    platform: 'Polymarket',
+    title: 'Will GPT-5 be released in 2025?',
+    icon: '🧠',
+    outcomes: [
+      { name: 'Yes', percentage: 72, color: 'green' },
+      { name: 'No', percentage: 28, color: 'red' },
+    ],
+    moreOptions: 2,
+    volume: '$85.4M',
+    date: 'Dec 31',
+  },
+  {
+    id: 3,
+    platform: 'Polymarket',
+    title: 'Bitcoin price above $100k in 2024?',
+    icon: '₿',
+    outcomes: [
+      { name: 'Yes', percentage: 45, color: 'green' },
+      { name: 'No', percentage: 55, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: '$1.2B',
+    date: 'Dec 31',
+  },
+  {
+    id: 4,
+    platform: 'Polymarket',
+    title: 'Highest grossing movie in 2025?',
+    icon: '🎬',
+    outcomes: [
+      { name: 'Wicked 2', percentage: 40, color: 'green' },
+      { name: 'Avatar 3', percentage: 35, color: 'blue' },
+    ],
+    moreOptions: 8,
+    volume: '$74.2M',
+    date: 'Dec 31',
+  },
+
+  // --- KALSHI (Green) ---
+  {
+    id: 101,
+    platform: 'Kalshi',
+    title: 'Fed Interest Rate Decision - Dec 2024',
+    icon: '🏦',
+    outcomes: [
+      { name: 'Unchanged', percentage: 65, color: 'green' },
+      { name: 'Cut 25bps', percentage: 35, color: 'red' },
+    ],
+    moreOptions: 1,
+    volume: '$4.5M',
+    date: 'Dec 18',
+  },
+  {
+    id: 102,
+    platform: 'Kalshi',
+    title: 'NYC Snowfall > 5 inches in Jan?',
+    icon: '❄️',
+    outcomes: [
+      { name: 'Yes', percentage: 20, color: 'green' },
+      { name: 'No', percentage: 80, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: '$890K',
+    date: 'Jan 31',
+  },
+  {
+    id: 103,
+    platform: 'Kalshi',
+    title: 'US GDP Growth Q4 2024 > 2.5%?',
+    icon: '📈',
+    outcomes: [
+      { name: 'Yes', percentage: 42, color: 'green' },
+      { name: 'No', percentage: 58, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: '$2.1M',
+    date: 'Jan 30',
+  },
+  {
+    id: 104,
+    platform: 'Kalshi',
+    title: 'Taylor Swift Album Release 2025?',
+    icon: '🎵',
+    outcomes: [
+      { name: 'Yes', percentage: 85, color: 'green' },
+      { name: 'No', percentage: 15, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: '$1.5M',
+    date: 'Dec 31',
+  },
+
+  // --- MANIFOLD (Purple) ---
+  {
+    id: 201,
+    platform: 'Manifold',
+    title: 'Will SpaceX Starship reach orbit in 2025?',
+    icon: '🚀',
+    outcomes: [
+      { name: 'Yes', percentage: 92, color: 'green' },
+      { name: 'No', percentage: 8, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: 'M$ 450K',
+    date: 'Dec 31',
+  },
+  {
+    id: 202,
+    platform: 'Manifold',
+    title: 'Will AGI be achieved by 2027?',
+    icon: '🤖',
+    outcomes: [
+      { name: 'Yes', percentage: 35, color: 'green' },
+      { name: 'No', percentage: 65, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: 'M$ 890K',
+    date: '2027',
+  },
+  {
+    id: 203,
+    platform: 'Manifold',
+    title: 'Will humans land on Mars by 2030?',
+    icon: '🪐',
+    outcomes: [
+      { name: 'Yes', percentage: 12, color: 'green' },
+      { name: 'No', percentage: 88, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: 'M$ 1.2M',
+    date: '2030',
+  },
+  {
+    id: 204,
+    platform: 'Manifold',
+    title: 'Will fusion power satisfy 1% of world energy?',
+    icon: '⚛️',
+    outcomes: [
+      { name: 'Before 2035', percentage: 5, color: 'green' },
+      { name: 'After 2035', percentage: 95, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: 'M$ 200K',
+    date: '2035',
+  },
+
+  // --- PREDICTIT (Red) ---
+  {
+    id: 301,
+    platform: 'PredictIt',
+    title: 'Who will win the 2026 World Cup?',
+    icon: '⚽',
+    outcomes: [
+      { name: 'France', percentage: 18, color: 'green' },
+      { name: 'Brazil', percentage: 15, color: 'blue' },
+    ],
+    moreOptions: 30,
+    volume: '320K Shares',
+    date: 'Jul 2026',
+  },
+  {
+    id: 302,
+    platform: 'PredictIt',
+    title: 'UK Prime Minister after next election?',
+    icon: '🇬🇧',
+    outcomes: [
+      { name: 'Starmer', percentage: 85, color: 'green' },
+      { name: 'Sunak', percentage: 5, color: 'red' },
+    ],
+    moreOptions: 5,
+    volume: '150K Shares',
+    date: 'Jan 2025',
+  },
+  {
+    id: 303,
+    platform: 'PredictIt',
+    title: 'Who will be the next Pope?',
+    icon: '⛪',
+    outcomes: [
+      { name: 'Tagle', percentage: 12, color: 'green' },
+      { name: 'Erdő', percentage: 8, color: 'blue' },
+    ],
+    moreOptions: 25,
+    volume: '85K Shares',
+    date: '???',
+  },
+  {
+    id: 304,
+    platform: 'PredictIt',
+    title: 'Will California secede?',
+    icon: '🐻',
+    outcomes: [
+      { name: 'Yes', percentage: 3, color: 'green' },
+      { name: 'No', percentage: 97, color: 'red' },
+    ],
+    moreOptions: 0,
+    volume: '500K Shares',
+    date: 'Dec 31',
+  },
 ];
 
+const getPlatformStyles = (platform: string) => {
+  switch (platform.toLowerCase()) {
+    case 'kalshi':
+      return {
+        bg: 'bg-[#1a2f23]',
+        border: 'border-green-900/30',
+        text: 'text-green-400',
+        iconBg: 'bg-green-500',
+        shadow: 'shadow-[0_0_6px_rgba(34,197,94,0.5)]',
+      };
+    case 'manifold':
+      return {
+        bg: 'bg-[#2d1b36]',
+        border: 'border-purple-900/30',
+        text: 'text-purple-400',
+        iconBg: 'bg-purple-500',
+        shadow: 'shadow-[0_0_6px_rgba(168,85,247,0.5)]',
+      };
+    case 'predictit':
+      return {
+        bg: 'bg-[#2f1a1a]',
+        border: 'border-red-900/30',
+        text: 'text-red-400',
+        iconBg: 'bg-red-500',
+        shadow: 'shadow-[0_0_6px_rgba(239,68,68,0.5)]',
+      };
+    case 'polymarket':
+    default:
+      return {
+        bg: 'bg-[#1d283a]',
+        border: 'border-blue-900/30',
+        text: 'text-blue-400',
+        iconBg: 'bg-blue-500',
+        shadow: 'shadow-[0_0_6px_rgba(59,130,246,0.5)]',
+      };
+  }
+};
+
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [query, setQuery] = useState('');
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const router = useRouter();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % placeholders.length);
-    }, 3000); // Change every 3 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!query.trim() || isLoading) return;
-    setIsLoading(true);
-    router.push(`/results?q=${encodeURIComponent(query)}`);
-  };
-
-  const examplePredictions = [
-    {
-      platform: 'Kalshi',
-      odds: '2.4x',
-      prediction: 'Bitcoin > $100k',
-      color: 'green',
-    },
-    {
-      platform: 'Polymarket',
-      odds: '3.1x',
-      prediction: 'AI AGI by 2025',
-      color: 'purple',
-    },
-    {
-      platform: 'Manifold',
-      odds: '1.8x',
-      prediction: 'Lakers Win NBA',
-      color: 'teal',
-    },
-  ];
-
-  // Find the highest odds for "BEST ODDS" badge
-  const highestOdds = Math.max(
-    ...examplePredictions.map((c) => parseFloat(c.odds))
-  );
-
   return (
-    <div className="min-h-screen w-full bg-slate-950">
-      {/* Hero Section */}
-      <section className="min-h-screen flex flex-col items-center justify-center px-4 py-20">
-        <div className="w-full max-w-5xl mx-auto flex flex-col items-center text-center">
-          {/* Group 1: Headlines */}
-          <div
-            style={{ marginBottom: '60px' }}
-            className="flex flex-col items-center"
-          >
-            <h1
-              style={{ marginBottom: '16px' }}
-              className="text-6xl md:text-8xl font-bold text-slate-500/80 font-heading"
-            >
-              Find Your Edge
-            </h1>
-            <h1 className="text-6xl md:text-8xl font-bold bg-gradient-to-r from-green-400 via-green-500 to-red-500 bg-clip-text text-transparent font-heading">
-              Across Every Market
-            </h1>
-          </div>
+    <div className="min-h-screen bg-[#050505] pt-16 flex flex-col items-center">
+      {/* Category Bar - Full Width */}
+      <CategoryBar />
 
-          {/* Group 2: Subtitle */}
-          <p
-            style={{ marginBottom: '64px' }}
-            className="text-xl text-slate-300 max-w-3xl mx-auto"
-          >
-            Compare odds from Kalshi, Polymarket, Manifold Markets, and
-            PredictIt
-          </p>
+      {/* Spacer to separate category bar from content */}
+      <div style={{ height: '80px', width: '100%' }} />
 
-          {/* Group 3: Search input + button */}
-          <div
-            style={{ marginBottom: '48px' }}
-            className="w-full max-w-2xl mx-auto"
-          >
-            <form onSubmit={handleSearch} className="flex flex-col">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                style={{ height: '72px', marginBottom: '20px' }}
-                className="w-full px-8 text-lg bg-slate-800/50 border border-slate-700 rounded-xl text-white placeholder:text-slate-400 focus:border-green-500 focus:ring-2 focus:ring-green-500/20 focus:outline-none hover:border-green-500/30 transition-all duration-300 text-center animate-[fadeIn_0.5s_ease-in-out]"
-                placeholder={placeholders[placeholderIndex]}
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !query.trim()}
-                style={{ height: '56px' }}
-                className="w-full bg-gradient-to-r from-green-500 to-red-500 hover:from-green-600 hover:to-red-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all hover:shadow-lg hover:shadow-green-500/50 flex items-center justify-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
-                {isLoading ? 'Searching...' : 'Search Markets'}
-              </button>
-            </form>
-          </div>
-
-          {/* Group 4: AI text + badges */}
-          <div className="flex flex-col items-center">
-            <p
-              style={{ marginBottom: '24px' }}
-              className="text-slate-400 text-xl"
-            >
-              AI-powered search finds the best opportunities across all
-              prediction markets
-            </p>
-            <div
-              style={{ display: 'flex', gap: '32px', justifyContent: 'center' }}
-              className="flex-wrap items-center pt-4"
-            >
-              <span className="flex items-center gap-2 text-sm text-slate-300 bg-slate-800/30 px-4 py-2 rounded-full border border-slate-700/50">
-                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                5 Markets Scanned
-              </span>
-              <span className="flex items-center gap-2 text-sm text-slate-300 bg-slate-800/30 px-4 py-2 rounded-full border border-slate-700/50">
-                <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                AI-Powered
-              </span>
-              <span className="flex items-center gap-2 text-sm text-slate-300 bg-slate-800/30 px-4 py-2 rounded-full border border-slate-700/50">
-                <span className="w-2 h-2 bg-red-500 rounded-full"></span>
-                Real-Time
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Example Predictions Section */}
-      <section
-        style={{ marginTop: '40px' }}
-        className="py-16 bg-slate-900/30 flex flex-col items-center justify-center px-4"
-      >
-        <div className="w-full max-w-7xl mx-auto flex flex-col items-center">
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-5xl font-bold text-center text-white font-heading"
-            style={{ marginBottom: '48px' }}
-          >
-            Example Predictions
-          </motion.h2>
-          <div className="flex flex-wrap justify-center gap-6 max-w-6xl mx-auto">
-            {examplePredictions.map((card, index) => {
-              const isBestOdds = parseFloat(card.odds) === highestOdds;
-              const colorClasses = {
-                green:
-                  'bg-green-500/20 text-green-400 border-green-500/30 text-green-400',
-                purple:
-                  'bg-gradient-to-r from-green-500/20 to-red-500/20 text-green-400 border-green-500/30 text-green-400',
-                teal: 'bg-gradient-to-r from-green-500/20 via-green-400/20 to-red-500/20 text-green-400 border-green-500/30 text-green-400',
-                blue: 'bg-green-500/20 text-green-400 border-green-500/30 text-green-400',
-              };
-              const cardColor = card.color as keyof typeof colorClasses;
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: '-100px' }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  style={{ minHeight: '280px', padding: '32px' }}
-                  className="w-[350px] bg-slate-800/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl hover:scale-105 hover:border-green-500/50 hover:shadow-2xl hover:shadow-green-500/10 transition-all duration-300 cursor-pointer relative group flex flex-col items-center justify-between h-full text-center"
-                >
-                  {isBestOdds && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-green-500 to-red-500 text-white text-xs font-bold rounded-full border-2 border-green-400 shadow-lg shadow-green-500/50">
-                      BEST ODDS
-                    </div>
-                  )}
-                  <span
-                    className={`text-sm font-semibold px-3 py-1 rounded-full border ${
-                      cardColor === 'green'
-                        ? colorClasses.green
-                        : cardColor === 'purple'
-                        ? colorClasses.purple
-                        : cardColor === 'teal'
-                        ? colorClasses.teal
-                        : colorClasses.blue
-                    }`}
-                  >
-                    {card.platform}
-                  </span>
-                  <p className="text-lg text-slate-200 my-4">
-                    {card.prediction}
-                  </p>
-                  <div
-                    className={`text-6xl font-bold font-heading ${
-                      cardColor === 'green'
-                        ? 'text-green-400'
-                        : cardColor === 'purple'
-                        ? 'bg-gradient-to-r from-green-400 to-red-400 bg-clip-text text-transparent'
-                        : cardColor === 'teal'
-                        ? 'bg-gradient-to-r from-green-400 via-green-300 to-red-400 bg-clip-text text-transparent'
-                        : 'text-green-400'
-                    }`}
-                  >
-                    {card.odds}
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Supported Platforms Section */}
-      <section
-        style={{ marginTop: '60px', paddingTop: '80px', paddingBottom: '80px' }}
-        className="flex flex-col items-center justify-center px-4"
-      >
-        <div className="w-full max-w-7xl mx-auto flex flex-col items-center">
-          <motion.h2
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-5xl font-bold text-center text-white font-heading"
-            style={{ marginBottom: '48px' }}
-          >
-            Supported Platforms
-          </motion.h2>
-          <div className="flex flex-wrap justify-center gap-6 max-w-7xl mx-auto">
-            {[
-              {
-                name: 'Kalshi',
-                desc: 'Regulated US markets',
-                hoverColor: 'group-hover:text-green-400',
-                iconColor: 'bg-green-500/20',
-              },
-              {
-                name: 'Polymarket',
-                desc: 'Crypto-native platform',
-                hoverColor: 'group-hover:text-green-400',
-                iconColor: 'bg-gradient-to-r from-green-500/20 to-red-500/20',
-              },
-              {
-                name: 'Manifold',
-                desc: 'Community-driven markets',
-                hoverColor: 'group-hover:text-green-400',
-                iconColor:
-                  'bg-gradient-to-r from-green-500/20 via-green-400/20 to-red-500/20',
-              },
-              {
-                name: 'PredictIt',
-                desc: 'Political & current events',
-                hoverColor: 'group-hover:text-red-400',
-                iconColor: 'bg-red-500/20',
-              },
-            ].map((platform, index) => (
+      {/* Main Content Grid - Centered */}
+      <div className="w-full max-w-[1600px] mx-auto px-12 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+          {mockMarkets.map((market, index) => {
+            const styles = getPlatformStyles(market.platform);
+            return (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-100px' }}
-                transition={{ duration: 0.5, delay: index * 0.15 }}
-                style={{ minHeight: '300px', padding: '32px' }}
-                className="w-[280px] bg-slate-800/30 border border-slate-700/30 rounded-2xl hover:bg-slate-800/50 hover:translate-y-[-4px] hover:border-slate-600 transition-all duration-300 cursor-pointer group flex flex-col items-start"
+                key={market.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: index * 0.05 }}
+                className="bg-[#131313] border border-[#222] rounded-xl hover:border-[#333] transition-all cursor-pointer group flex flex-col h-full relative shadow-sm min-h-[440px]"
+                style={{ padding: '32px' }}
+                onClick={() => router.push(`/market/${market.id}`)}
               >
-                <div
-                  className={`w-12 h-12 ${platform.iconColor} rounded-lg flex items-center justify-center`}
-                >
-                  <div className="w-8 h-8 bg-white/20 rounded"></div>
+                {/* Header */}
+                <div className="flex items-start gap-3 mb-8">
+                  {/* Icon Box */}
+                  <div className="w-12 h-12 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-3xl shrink-0 shadow-sm group-hover:border-[#333] transition-colors">
+                    {market.icon}
+                  </div>
+
+                  {/* Title & Platform */}
+                  <div className="flex-1 min-w-0 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <div
+                        className={`flex items-center gap-1.5 rounded ${styles.bg} border ${styles.border}`}
+                        style={{ padding: '6px 12px' }}
+                      >
+                        <div
+                          className={`w-3.5 h-3.5 rounded-[2px] flex items-center justify-center ${styles.shadow} ${styles.iconBg}`}
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            className="w-2.5 h-2.5 text-white transform rotate-45"
+                            fill="currentColor"
+                          >
+                            <path d="M12 2L2 12l10 10 10-10L12 2z" />
+                          </svg>
+                        </div>
+                        <span
+                          className={`text-[11px] font-bold tracking-wide uppercase ${styles.text}`}
+                        >
+                          {market.platform}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* FORCE SPACING */}
+                    <div style={{ height: '12px' }} />
+
+                    {/* TITLE */}
+                    <h3
+                      className="text-white font-bold text-[12px] leading-snug line-clamp-3 group-hover:text-slate-200 transition-colors tracking-tight min-h-[36px]"
+                      style={{ marginBottom: '24px' }}
+                    >
+                      {market.title}
+                    </h3>
+                  </div>
                 </div>
-                <div
-                  className={`text-2xl font-bold text-white font-heading mt-4 mb-2 ${platform.hoverColor} transition-colors`}
-                >
-                  {platform.name}
+
+                {/* Outcomes List */}
+                <div className="grow flex flex-col" style={{ gap: '16px' }}>
+                  {market.outcomes.map((outcome, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '16px 20px',
+                        backgroundColor: '#18181b',
+                        borderRadius: '8px',
+                        border: 'none',
+                      }}
+                      className="flex flex-col justify-center w-full"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-white font-bold text-[16px] tracking-tight leading-none">
+                          {outcome.name}
+                        </span>
+                        <span className="font-mono text-[18px] font-bold text-white tracking-tight leading-none">
+                          {outcome.percentage}%
+                        </span>
+                      </div>
+                      {/* Progress Bar */}
+                      <div
+                        className="w-full h-1.5 bg-[#27272a] rounded-sm overflow-hidden"
+                        style={{ marginTop: '8px' }}
+                      >
+                        <div
+                          className={`h-full rounded-sm transition-all duration-500 ${
+                            outcome.color === 'green'
+                              ? 'bg-emerald-500'
+                              : outcome.color === 'red'
+                              ? 'bg-rose-500'
+                              : 'bg-blue-500'
+                          }`}
+                          style={{ width: `${outcome.percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-slate-400 text-sm grow">{platform.desc}</p>
-                <a
-                  href="#"
-                  className="text-green-400 hover:text-red-400 transition-colors text-sm mt-auto"
+
+                {/* Footer Section */}
+                <div
+                  className="mt-auto border-t border-[#1f1f1f]"
+                  style={{ marginTop: '32px', paddingTop: '20px' }}
                 >
-                  Learn More →
-                </a>
+                  {/* More Options Text */}
+                  <div
+                    className="text-[11px] text-[#555] font-medium text-center hover:text-slate-400 transition-colors"
+                    style={{ marginBottom: '20px' }}
+                  >
+                    +{market.moreOptions} more options
+                  </div>
+
+                  {/* Meta Data */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-[#666]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                        />
+                      </svg>
+                      <span className="text-[11px] text-[#777] font-bold tracking-tight">
+                        {market.volume} vol
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <svg
+                        className="w-3.5 h-3.5 text-[#666]"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      <span className="text-[11px] text-[#777] font-bold tracking-tight">
+                        {market.date}
+                      </span>
+                    </div>
+                  </div>
+                </div>
               </motion.div>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      </section>
+      </div>
     </div>
   );
 }
