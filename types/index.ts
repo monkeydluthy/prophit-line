@@ -5,15 +5,34 @@ export interface ParsedPrediction {
   conditions?: string[];
 }
 
+export interface MarketOutcome {
+  name: string;
+  percentage: number; // 0-100
+  color?: string; // 'green' | 'red' | 'blue'
+  price: number; // 0-1
+}
+
 export interface MarketResult {
-  platform: string;
-  marketTitle: string;
-  outcome: string;
-  odds: number; // as decimal odds (e.g., 2.5 = 2.5x return)
-  price: number; // as percentage (e.g., 0.4 = 40% probability)
-  liquidity: number;
-  volume: number;
+  id: string; // Unique ID (or slug)
+  platform: 'Polymarket' | 'Manifold' | 'Kalshi' | 'PredictIt';
+  title: string;
+  icon?: string;
+  outcomes: MarketOutcome[];
+  volume: number | string;
+  liquidity?: number | string;
+  date: string; // End date
   link: string;
+  markets?: Array<{
+    name: string;
+    shortName?: string;
+    yesPrice?: number;
+    noPrice?: number;
+    probability?: number;
+    volume?: number | string;
+    liquidity?: number | string;
+    ticker?: string;
+    icon?: string;
+  }>;
 }
 
 export interface SearchResults {
@@ -21,4 +40,3 @@ export interface SearchResults {
   parsedPrediction: ParsedPrediction;
   markets: MarketResult[];
 }
-

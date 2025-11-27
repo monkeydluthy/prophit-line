@@ -20,19 +20,18 @@ export async function POST(request: NextRequest) {
 
     // Check if API key is set
     if (!process.env.ANTHROPIC_API_KEY) {
-      // Return mock parsed prediction if no API key
-      const mockParsed: ParsedPrediction = {
-        event: query.includes("Bitcoin") ? "Bitcoin price" : "Market event",
-        outcome: query.includes("under") ? "Price goes under threshold" : "Predicted outcome",
-        timeframe: query.includes("end of year") ? "End of year" : undefined,
+      const fallbackParsed: ParsedPrediction = {
+        event: query,
+        outcome: query,
+        timeframe: undefined,
         conditions: [],
       };
-      
-      const markets = await searchMarkets(mockParsed);
-      
+
+      const markets = await searchMarkets(fallbackParsed);
+
       return NextResponse.json({
         query,
-        parsedPrediction: mockParsed,
+        parsedPrediction: fallbackParsed,
         markets,
       } as SearchResults);
     }
