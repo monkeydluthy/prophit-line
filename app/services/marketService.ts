@@ -152,6 +152,11 @@ export async function getMarket(id: string): Promise<MarketResult | null> {
 }
 
 export async function getMarketHistory(id: string): Promise<any[]> {
+  const snapshotHistory = await getSnapshotHistory(id);
+  if (snapshotHistory && snapshotHistory.length > 0) {
+    return snapshotHistory;
+  }
+
   const parts = id.split(':');
   if (parts.length < 2) return [];
 
@@ -216,4 +221,57 @@ function computeRelevanceScore(
   });
 
   return score;
+}
+
+async function getSnapshotHistory(
+  marketId: string
+): Promise<{ time: number; value: number }[] | null> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return null;
+  }
+
+  const query = new URLSearchParams({
+    select: 'recorded_at,price',
+    market_id: `eq.${marketId}`,
+    order: 'recorded_at.asc',
+    limit: '500',
+  });
+
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/market_snapshots?${query.toString()}`,
+      {
+        headers: {
+          apikey: supabaseKey,
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        cache: 'no-store',
+      }
+    );
+
+    if (!response.ok) {
+      console.warn('Snapshot history fetch failed', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      return null;
+    }
+
+    return data
+      .map((row: any) => {
+        const ts = Date.parse(row.recorded_at);
+        const value = Number(row.price);
+        if (!Number.isFinite(ts) || !Number.isFinite(value)) return null;
+        return { time: ts, value };
+      })
+      .filter(Boolean) as { time: number; value: number }[];
+  } catch (error) {
+    console.error('Snapshot history error', error);
+    return null;
+  }
 }

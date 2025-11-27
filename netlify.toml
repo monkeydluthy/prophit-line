@@ -1,0 +1,3 @@
+[functions."snapshot-collector"]
+  schedule = "*/15 * * * *"
+
