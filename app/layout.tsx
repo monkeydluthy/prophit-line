@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import Link from 'next/link';
@@ -31,7 +32,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#050505]`}
       >
-        <Header />
+        <Suspense fallback={null}>
+          <Header />
+        </Suspense>
         <div className="animated-bg" />
 
         <main className="min-h-screen w-full">{children}</main>
