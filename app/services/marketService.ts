@@ -115,25 +115,49 @@ export async function getFrontPageMarkets(
     manifold: manifoldTrending.length,
   });
 
-  const combined = [
-    ...polymarketTrending,
-    ...kalshiTrending,
-    ...predictItTrending,
-    ...manifoldTrending,
-  ];
+  // Sort each platform's markets by volume separately
+  const sortedByPlatform = {
+    Polymarket: polymarketTrending.sort((a, b) => parseVolume(b.volume) - parseVolume(a.volume)),
+    Kalshi: kalshiTrending.sort((a, b) => parseVolume(b.volume) - parseVolume(a.volume)),
+    PredictIt: predictItTrending.sort((a, b) => parseVolume(b.volume) - parseVolume(a.volume)),
+    Manifold: manifoldTrending.sort((a, b) => parseVolume(b.volume) - parseVolume(a.volume)),
+  };
 
+  // Deduplicate within each platform
+  const dedupedByPlatform = {
+    Polymarket: deduplicateMarkets(sortedByPlatform.Polymarket),
+    Kalshi: deduplicateMarkets(sortedByPlatform.Kalshi),
+    PredictIt: deduplicateMarkets(sortedByPlatform.PredictIt),
+    Manifold: deduplicateMarkets(sortedByPlatform.Manifold),
+  };
+
+  // Interleave platforms round-robin style
+  const interleaved: MarketResult[] = [];
+  const maxLength = Math.max(
+    dedupedByPlatform.Polymarket.length,
+    dedupedByPlatform.Kalshi.length,
+    dedupedByPlatform.PredictIt.length,
+    dedupedByPlatform.Manifold.length
+  );
+
+  for (let i = 0; i < maxLength; i++) {
+    if (dedupedByPlatform.Polymarket[i]) interleaved.push(dedupedByPlatform.Polymarket[i]);
+    if (dedupedByPlatform.Kalshi[i]) interleaved.push(dedupedByPlatform.Kalshi[i]);
+    if (dedupedByPlatform.PredictIt[i]) interleaved.push(dedupedByPlatform.PredictIt[i]);
+    if (dedupedByPlatform.Manifold[i]) interleaved.push(dedupedByPlatform.Manifold[i]);
+  }
+
+  return interleaved;
+}
+
+function deduplicateMarkets(markets: MarketResult[]): MarketResult[] {
   const uniqueMap = new Map<string, MarketResult>();
-  combined.forEach((market) => {
+  markets.forEach((market) => {
     if (!uniqueMap.has(market.id)) {
       uniqueMap.set(market.id, market);
     }
   });
-
-  const sorted = Array.from(uniqueMap.values()).sort(
-    (a, b) => parseVolume(b.volume) - parseVolume(a.volume)
-  );
-
-  return sorted;
+  return Array.from(uniqueMap.values());
 }
 
 export async function getMarket(id: string): Promise<MarketResult | null> {

@@ -171,6 +171,16 @@ body {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Slide in from right animation for mobile menu */
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
 /* Skeleton loading */
 @keyframes skeleton-loading {
   0% {

@@ -13,6 +13,7 @@ export default function Header() {
   const [suggestions, setSuggestions] = useState<MarketResult[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -94,136 +95,252 @@ export default function Header() {
     return `${Math.round(value)}%`;
   };
 
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#1f1f1f] bg-[#0a0a0a]">
-      <div className="w-full max-w-[1600px] mx-auto px-12 h-16 flex items-center justify-between">
-        {/* Left: Logo & Nav */}
-        <div className="flex items-center gap-8">
-          <div style={{ marginLeft: '100px' }}>
+    <>
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#1f1f1f] bg-[#0a0a0a]">
+        <div className="w-full max-w-[1600px] mx-auto px-4 md:px-12 h-16 flex items-center justify-between">
+          {/* Left: Logo */}
+          <div className="flex items-center">
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/final-logo.png"
                 alt="ProphitLine"
                 width={40}
                 height={40}
-                className="w-10 h-10"
+                className="w-8 h-8 md:w-10 md:h-10"
               />
-              <span className="text-xl font-bold text-white">ProphitLine</span>
+              <span className="text-lg md:text-xl font-bold text-white">ProphitLine</span>
             </Link>
           </div>
-        </div>
 
-        {/* Center: Search */}
-        <div className="flex-1 flex justify-center px-8">
-          <div className="w-full max-w-[520px] relative" ref={wrapperRef}>
-            <form onSubmit={handleSearch} className="relative">
-              <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                <svg
-                  className="w-4 h-4 text-slate-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => handleInputChange(e.target.value)}
-                placeholder="Search markets..."
-                style={{ paddingLeft: '60px', height: '50px' }}
-                className="w-full bg-[#151515] border border-[#2a2a2a] text-sm rounded-xl focus:outline-none focus:border-[#444] text-slate-200 placeholder:text-slate-600"
-              />
-            </form>
-            {showDropdown && (
-              <div className="absolute left-0 right-0 mt-3 w-full bg-[#111] border border-[#222] rounded-3xl shadow-2xl max-h-[420px] overflow-y-auto z-50 px-4 py-4">
-                {loadingSuggestions ? (
-                  <div className="p-6 text-center text-slate-400 text-sm">
-                    Searching markets...
-                  </div>
-                ) : suggestions.length === 0 ? (
-                  <div className="p-6 text-center text-slate-500 text-sm">
-                    No markets found. Try another query.
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex flex-col gap-3">
-                      {suggestions.map((market) => (
-                        <button
-                          key={market.id}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-[#181818] text-left rounded-2xl border border-[#161616] hover:border-[#2a2a2a] transition-colors"
-                          style={{ marginLeft: '4px', marginRight: '8px' }}
-                          onClick={() => handleSelectMarket(market.id)}
-                        >
-                          <div className="w-10 h-10 rounded-xl bg-[#1f1f1f] border border-[#2a2a2a] flex items-center justify-center text-2xl overflow-hidden">
-                            {market.icon && market.icon.startsWith('http') ? (
-                              <img
-                                src={market.icon}
-                                alt=""
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              market.icon || '📈'
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[13px] text-slate-200 font-semibold line-clamp-1">
-                              {market.title}
-                            </p>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
-                              <span className="uppercase font-bold">
-                                {market.platform}
-                              </span>
-                              <span>•</span>
-                              <span>{formatVolumeLabel(market.volume)} vol</span>
-                            </div>
-                          </div>
-                          <div className="text-[12px] text-emerald-400 font-mono">
-                            {formatOutcomeBadge(market)}
-                          </div>
-                        </button>
-                      ))}
+          {/* Center: Search - Desktop Only */}
+          <div className="hidden md:flex flex-1 justify-center px-8">
+            <div className="w-full max-w-[520px] relative" ref={wrapperRef}>
+              <form onSubmit={handleSearch} className="relative">
+                <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                  <svg
+                    className="w-4 h-4 text-slate-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => handleInputChange(e.target.value)}
+                  placeholder="Search markets..."
+                  style={{ paddingLeft: '60px', height: '50px' }}
+                  className="w-full bg-[#151515] border border-[#2a2a2a] text-sm rounded-xl focus:outline-none focus:border-[#444] text-slate-200 placeholder:text-slate-600"
+                />
+              </form>
+              {showDropdown && (
+                <div className="absolute left-0 right-0 mt-3 w-full bg-[#111] border border-[#222] rounded-3xl shadow-2xl max-h-[420px] overflow-y-auto z-50 px-4 py-4">
+                  {loadingSuggestions ? (
+                    <div className="p-6 text-center text-slate-400 text-sm">
+                      Searching markets...
                     </div>
-                    <button
-                      className="w-full text-center text-[12px] text-slate-300 py-3 mt-3 rounded-xl border border-[#1f1f1f] hover:text-white hover:border-[#2a2a2a] transition-colors"
-                      onClick={() => {
-                        setShowDropdown(false);
-                        router.push(`/results?q=${encodeURIComponent(query)}`);
-                      }}
-                    >
-                      See all results for “{query}”
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+                  ) : suggestions.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-sm">
+                      No markets found. Try another query.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex flex-col gap-3">
+                        {suggestions.map((market) => (
+                          <button
+                            key={market.id}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-[#181818] text-left rounded-2xl border border-[#161616] hover:border-[#2a2a2a] transition-colors"
+                            style={{ marginLeft: '4px', marginRight: '8px' }}
+                            onClick={() => handleSelectMarket(market.id)}
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-[#1f1f1f] border border-[#2a2a2a] flex items-center justify-center text-2xl overflow-hidden">
+                              {market.icon && market.icon.startsWith('http') ? (
+                                <img
+                                  src={market.icon}
+                                  alt=""
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                market.icon || '📈'
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[13px] text-slate-200 font-semibold line-clamp-1">
+                                {market.title}
+                              </p>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-1">
+                                <span className="uppercase font-bold">
+                                  {market.platform}
+                                </span>
+                                <span>•</span>
+                                <span>{formatVolumeLabel(market.volume)} vol</span>
+                              </div>
+                            </div>
+                            <div className="text-[12px] text-emerald-400 font-mono">
+                              {formatOutcomeBadge(market)}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        className="w-full text-center text-[12px] text-slate-300 py-3 mt-3 rounded-xl border border-[#1f1f1f] hover:text-white hover:border-[#2a2a2a] transition-colors"
+                        onClick={() => {
+                          setShowDropdown(false);
+                          router.push(`/results?q=${encodeURIComponent(query)}`);
+                        }}
+                      >
+                        See all results for "{query}"
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Right: Sign In */}
-        <button className="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white transition-colors">
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+
+          {/* Right: Hamburger Menu - Mobile Only */}
+          <button
+            id="mobile-menu-button"
+            className="md:hidden p-2 text-slate-300 hover:text-white transition-colors"
+            style={{ paddingRight: '16px' }}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
+          </button>
+
+          {/* Right: Sign In - Desktop Only */}
+          <button className="hidden md:flex items-center gap-2 px-4 py-2 text-sm text-slate-300 hover:text-white transition-colors">
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+            Sign In
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Search Bar - Below Header */}
+      <div className="fixed top-16 left-0 right-0 z-40 bg-[#0a0a0a] border-b border-[#1f1f1f] md:hidden py-3 h-[68px]">
+        <div className="relative" ref={wrapperRef} style={{ paddingLeft: '16px', paddingRight: '16px' }}>
+          <form onSubmit={handleSearch} className="relative">
+            <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+              <svg
+                className="w-4 h-4 text-slate-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => handleInputChange(e.target.value)}
+              placeholder="Search markets..."
+              style={{ paddingLeft: '44px', height: '44px', marginTop: '8px' }}
+              className="w-full bg-[#151515] border border-[#2a2a2a] text-sm rounded-xl focus:outline-none focus:border-[#444] text-slate-200 placeholder:text-slate-600"
             />
-          </svg>
-          Sign In
-        </button>
+          </form>
+          {showDropdown && (
+            <div className="absolute left-0 right-0 mt-2 w-full bg-[#111] border border-[#222] rounded-2xl shadow-2xl max-h-[400px] overflow-y-auto z-50 px-3 py-3">
+              {loadingSuggestions ? (
+                <div className="p-4 text-center text-slate-400 text-sm">
+                  Searching markets...
+                </div>
+              ) : suggestions.length === 0 ? (
+                <div className="p-4 text-center text-slate-500 text-sm">
+                  No markets found. Try another query.
+                </div>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-2">
+                    {suggestions.map((market) => (
+                      <button
+                        key={market.id}
+                        className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#181818] text-left rounded-xl border border-[#161616] hover:border-[#2a2a2a] transition-colors"
+                        onClick={() => handleSelectMarket(market.id)}
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[#1f1f1f] border border-[#2a2a2a] flex items-center justify-center text-lg overflow-hidden shrink-0">
+                          {market.icon && market.icon.startsWith('http') ? (
+                            <img
+                              src={market.icon}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            market.icon || '📈'
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-slate-200 font-semibold line-clamp-1">
+                            {market.title}
+                          </p>
+                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 mt-0.5">
+                            <span className="uppercase font-bold">
+                              {market.platform}
+                            </span>
+                            <span>•</span>
+                            <span>{formatVolumeLabel(market.volume)} vol</span>
+                          </div>
+                        </div>
+                        <div className="text-[11px] text-emerald-400 font-mono shrink-0">
+                          {formatOutcomeBadge(market)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    className="w-full text-center text-[11px] text-slate-300 py-2.5 mt-2 rounded-xl border border-[#1f1f1f] hover:text-white hover:border-[#2a2a2a] transition-colors"
+                    onClick={() => {
+                      setShowDropdown(false);
+                      router.push(`/results?q=${encodeURIComponent(query)}`);
+                    }}
+                  >
+                    See all results for "{query}"
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </header>
+
+    </>
   );
 }

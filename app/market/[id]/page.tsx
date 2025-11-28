@@ -14,9 +14,11 @@ export default function MarketPage() {
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [selectedTimeframe, setTimeframe] = useState('ALL');
   const [selectedOutcome, setSelectedOutcome] = useState('Yes');
+  const [selectedOutcomeIdx, setSelectedOutcomeIdx] = useState(0);
   const [selectedMarketIdx, setSelectedMarketIdx] = useState(0);
   const [tradeTab, setTradeTab] = useState('Buy');
   const [amount, setAmount] = useState('');
+  const [volumeFilter, setVolumeFilter] = useState('all');
 
   useEffect(() => {
     const fetchMarket = async () => {
@@ -40,13 +42,29 @@ export default function MarketPage() {
       if (!params.id) return;
       try {
         setLoadingHistory(true);
+        // Fetch history - could be enhanced to filter by selected outcome/market
         const res = await fetch(`/api/market/${params.id}/history`);
         const data = await res.json();
         if (Array.isArray(data)) {
           console.log(`Fetched history: ${data.length} points`);
           // Sort by time to prevent chart artifacts
           data.sort((a: any, b: any) => a.time - b.time);
-          setHistory(data);
+          
+          // Filter by timeframe if needed
+          let filteredData = data;
+          const now = Date.now();
+          if (selectedTimeframe === '1H') {
+            filteredData = data.filter((d: any) => d.time >= now - 60 * 60 * 1000);
+          } else if (selectedTimeframe === '24H') {
+            filteredData = data.filter((d: any) => d.time >= now - 24 * 60 * 60 * 1000);
+          } else if (selectedTimeframe === '7D') {
+            filteredData = data.filter((d: any) => d.time >= now - 7 * 24 * 60 * 60 * 1000);
+          } else if (selectedTimeframe === '30D') {
+            filteredData = data.filter((d: any) => d.time >= now - 30 * 24 * 60 * 60 * 1000);
+          }
+          // 'ALL' uses all data
+          
+          setHistory(filteredData);
         } else {
           console.warn('History API returned non-array:', data);
         }
@@ -59,11 +77,64 @@ export default function MarketPage() {
 
     fetchMarket();
     fetchHistory();
-  }, [params.id]);
+  }, [params.id, selectedTimeframe]);
 
   useEffect(() => {
     setSelectedMarketIdx(0);
+    setSelectedOutcomeIdx(0);
   }, [market?.id]);
+
+  useEffect(() => {
+    // Reset selected market index when filter changes
+    setSelectedMarketIdx(0);
+  }, [volumeFilter]);
+
+  // Parse volume string to number (handles "$1.2M", "M$500K", etc.)
+  const parseVolumeToNumber = (vol: number | string | undefined): number => {
+    if (typeof vol === 'number') return vol;
+    if (!vol || vol === 'N/A') return 0;
+    
+    const str = vol.toString().trim();
+    // Extract number and suffix (K, M, B)
+    const match = str.match(/([\d.]+)\s*([KMB]?)/i);
+    if (!match) return 0;
+    
+    const num = parseFloat(match[1]);
+    if (isNaN(num)) return 0;
+    
+    const suffix = match[2].toUpperCase();
+    let multiplier = 1;
+    if (suffix === 'B') multiplier = 1e9;
+    else if (suffix === 'M') multiplier = 1e6;
+    else if (suffix === 'K') multiplier = 1e3;
+    
+    return num * multiplier;
+  };
+
+  // Filter active markets by volume
+  const getFilteredActiveMarkets = () => {
+    if (!market?.markets) return [];
+    let filtered = [...market.markets];
+    
+    if (volumeFilter === 'high') {
+      filtered = filtered.filter((m) => {
+        const vol = parseVolumeToNumber(m.volume);
+        return vol >= 10000; // $10K+
+      });
+    } else if (volumeFilter === 'medium') {
+      filtered = filtered.filter((m) => {
+        const vol = parseVolumeToNumber(m.volume);
+        return vol >= 1000 && vol < 10000; // $1K-$10K
+      });
+    } else if (volumeFilter === 'low') {
+      filtered = filtered.filter((m) => {
+        const vol = parseVolumeToNumber(m.volume);
+        return vol < 1000 && vol > 0; // <$1K but > 0
+      });
+    }
+    
+    return filtered;
+  };
 
   const generateSmoothPath = (
     dataPoints: any[],
@@ -145,11 +216,16 @@ export default function MarketPage() {
   }
 
   const platformStyles = getPlatformStyles(market.platform);
-  const activeMarkets = market.markets || [];
+  const allActiveMarkets = market.markets || [];
+  const filteredActiveMarkets = getFilteredActiveMarkets();
   const selectedMarket =
-    activeMarkets[selectedMarketIdx] || activeMarkets[0] || null;
+    filteredActiveMarkets[selectedMarketIdx] || filteredActiveMarkets[0] || null;
+  
+  // Get selected outcome
+  const selectedOutcomeObj = market.outcomes[selectedOutcomeIdx] || market.outcomes[0];
   const topOutcome = market.outcomes[0];
-  const defaultYes = topOutcome ? topOutcome.percentage : 50;
+  const defaultYes = selectedOutcomeObj ? selectedOutcomeObj.percentage : (topOutcome ? topOutcome.percentage : 50);
+  
   const yesPrice =
     typeof selectedMarket?.yesPrice === 'number'
       ? Math.round(selectedMarket.yesPrice)
@@ -359,15 +435,23 @@ export default function MarketPage() {
                     {market.outcomes.slice(0, 4).map((outcome, idx) => (
                       <button
                         key={idx}
-                        className={`flex items-center gap-2 bg-[#1a1a1a] border border-[#333] hover:border-[#444] transition-all ${
-                          idx > 0 ? 'opacity-60 hover:opacity-100' : ''
+                        onClick={() => {
+                          setSelectedOutcomeIdx(idx);
+                          setSelectedOutcome(outcome.name);
+                        }}
+                        className={`flex items-center gap-2 border transition-all ${
+                          idx === selectedOutcomeIdx
+                            ? 'bg-[#1a2f23] border-emerald-500/50'
+                            : 'bg-[#1a1a1a] border-[#333] hover:border-[#444] opacity-60 hover:opacity-100'
                         }`}
                         style={{ padding: '8px 14px', borderRadius: '10px' }}
                       >
                         <span
                           className={`w-2.5 h-2.5 rounded-full ${
-                            idx === 0
+                            idx === selectedOutcomeIdx
                               ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]'
+                              : idx === 0
+                              ? 'bg-emerald-500'
                               : idx === 1
                               ? 'bg-blue-500'
                               : 'bg-red-500'
@@ -375,7 +459,7 @@ export default function MarketPage() {
                         ></span>
                         <span
                           className={`font-medium ${
-                            idx === 0 ? 'text-white' : 'text-slate-300'
+                            idx === selectedOutcomeIdx ? 'text-white' : 'text-slate-300'
                           }`}
                           style={{ fontSize: '11px' }}
                         >
@@ -383,7 +467,7 @@ export default function MarketPage() {
                         </span>
                         <span
                           className={`font-bold ${
-                            idx === 0 ? 'text-emerald-500' : 'text-slate-400'
+                            idx === selectedOutcomeIdx ? 'text-emerald-500' : 'text-slate-400'
                           }`}
                           style={{ fontSize: '11px' }}
                         >
@@ -571,29 +655,69 @@ export default function MarketPage() {
                         justifyContent: 'center',
                       }}
                     >
-                      {activeMarkets.length || 0}
+                      {filteredActiveMarkets.length || 0}
                     </span>
                   </div>
-                  <span
+                  <div
                     style={{
-                      color: '#64748b',
-                      fontSize: '12px',
-                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
                       marginRight: '24px',
                       marginTop: '12px',
                     }}
                   >
-                    Click to trade
-                  </span>
+                    <select
+                      value={volumeFilter}
+                      onChange={(e) => {
+                        setVolumeFilter(e.target.value);
+                        setSelectedMarketIdx(0);
+                      }}
+                      style={{
+                        backgroundColor: '#1a1a1a',
+                        border: '1px solid #333',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        color: '#94a3b8',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                      className="hover:border-[#444] transition-all"
+                    >
+                      <option value="all">All Volume</option>
+                      <option value="high">High ($10K+)</option>
+                      <option value="medium">Medium ($1K-$10K)</option>
+                      <option value="low">Low (&lt;$1K)</option>
+                    </select>
+                    <span
+                      style={{
+                        color: '#64748b',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Click to trade
+                    </span>
+                  </div>
                 </div>
 
-                {activeMarkets.length === 0 ? (
+                {filteredActiveMarkets.length === 0 ? (
                   <div className="text-center text-slate-500 py-12 border border-dashed border-[#222] rounded-xl">
-                    No active markets surfaced for this event yet.
+                    {volumeFilter === 'all' 
+                      ? 'No active markets surfaced for this event yet.'
+                      : `No markets found with ${volumeFilter} volume.`}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-3">
-                    {activeMarkets.map((child, idx) => (
+                    {filteredActiveMarkets.map((child, idx) => {
+                      // Find original index in allActiveMarkets for proper selection tracking
+                      const originalIdx = allActiveMarkets.findIndex(
+                        (m) => m.ticker === child.ticker || m.name === child.name
+                      );
+                      const isSelected = idx === selectedMarketIdx;
+                      
+                      return (
                       <button
                         key={`${child.ticker}-${idx}`}
                         onClick={() => {
@@ -601,7 +725,7 @@ export default function MarketPage() {
                           setSelectedOutcome('Yes');
                         }}
                         className={`flex items-center justify-between rounded-2xl border transition-all text-left ${
-                          idx === selectedMarketIdx
+                          isSelected
                             ? 'border-emerald-500/40 bg-[#0f1b15]'
                             : 'border-[#222] bg-[#0a0a0a] hover:border-[#333]'
                         }`}
@@ -650,7 +774,8 @@ export default function MarketPage() {
                           </span>
                         </div>
                       </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

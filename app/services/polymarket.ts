@@ -91,14 +91,74 @@ export async function getPolymarketTrending(
     );
 
     if (!response.ok) {
-      console.error('Polymarket trending error:', response.statusText);
+      console.error('Polymarket trending error:', response.status, response.statusText);
       return [];
     }
 
     const data = await response.json();
-    const events = Array.isArray(data?.data) ? data.data : [];
+    
+    // Check response structure
+    if (!data) {
+      console.error('Polymarket API returned null/undefined data');
+      return [];
+    }
+    
+    // The API might return data directly as an array, or nested in a 'data' property
+    let events: any[] = [];
+    if (Array.isArray(data)) {
+      events = data;
+    } else if (Array.isArray(data?.data)) {
+      events = data.data;
+    } else if (data?.events && Array.isArray(data.events)) {
+      events = data.events;
+    }
+    
+    console.log(`Polymarket API returned ${events.length} events. Response keys:`, Object.keys(data || {}));
+    
+    if (events.length === 0) {
+      console.warn('Polymarket API returned empty events array. Full response structure:', {
+        hasData: !!data,
+        dataType: Array.isArray(data) ? 'array' : typeof data,
+        dataKeys: data ? Object.keys(data) : [],
+        firstEventSample: data?.data?.[0] ? Object.keys(data.data[0]) : null,
+      });
+      return [];
+    }
 
-    return events.map((event: any) => mapPolymarketEvent(event));
+    // Log first event structure for debugging
+    if (events.length > 0) {
+      console.log('First Polymarket event structure:', {
+        id: events[0]?.id,
+        title: events[0]?.title,
+        hasMarkets: !!events[0]?.markets,
+        marketsLength: Array.isArray(events[0]?.markets) ? events[0].markets.length : 0,
+        marketsKeys: events[0]?.markets?.[0] ? Object.keys(events[0].markets[0]) : [],
+      });
+    }
+
+    const mapped = events
+      .map((event: any) => {
+        try {
+          const result = mapPolymarketEvent(event);
+          if (!result || !result.id) {
+            console.warn('mapPolymarketEvent returned invalid result:', { eventId: event?.id, result });
+            return null;
+          }
+          return result;
+        } catch (error) {
+          console.error('Error mapping Polymarket event:', error, {
+            eventId: event?.id,
+            title: event?.title,
+            hasMarkets: !!event?.markets,
+            marketsLength: Array.isArray(event?.markets) ? event.markets.length : 0,
+          });
+          return null;
+        }
+      })
+      .filter((m: any): m is MarketResult => m !== null && m !== undefined);
+
+    console.log(`Polymarket mapped ${mapped.length} markets from ${events.length} events`);
+    return mapped;
   } catch (error) {
     console.error('Polymarket trending fetch error:', error);
     return [];
@@ -165,18 +225,52 @@ export async function getPolymarketHistory(id: string): Promise<any[]> {
 }
 
 function mapPolymarketEvent(event: any): MarketResult {
-  let outcomes = [];
+  // Validate required fields
+  if (!event || !event.id) {
+    throw new Error('Invalid event: missing id');
+  }
+  
+  if (!event.title) {
+    console.warn('Event missing title:', event.id);
+  }
 
-  if (event.markets && event.markets.length > 1) {
-    outcomes = event.markets.map((m: any) => ({
-      name: m.groupItemTitle || m.question,
-      percentage: Math.round(Number(m.outcomePrices?.[0] || 0) * 100),
-      color: 'green',
-      price: Number(m.outcomePrices?.[0] || 0),
-    }));
-  } else if (event.markets && event.markets.length === 1) {
-    const m = event.markets[0];
-    const yesPrice = Number(m.outcomePrices?.[0] || 0);
+  let outcomes = [];
+  const markets = Array.isArray(event.markets) ? event.markets : [];
+  
+  // If no markets, we still want to create a market result, but log it
+  if (markets.length === 0) {
+    console.warn(`Event ${event.id} has no markets array or empty markets`);
+  }
+
+  // Helper to parse outcomePrices (can be string or array)
+  const parseOutcomePrices = (outcomePrices: any): number[] => {
+    if (Array.isArray(outcomePrices)) return outcomePrices.map(Number);
+    if (typeof outcomePrices === 'string') {
+      try {
+        const parsed = JSON.parse(outcomePrices);
+        return Array.isArray(parsed) ? parsed.map(Number) : [Number(parsed) || 0];
+      } catch {
+        return [0];
+      }
+    }
+    return [0];
+  };
+
+  if (markets.length > 1) {
+    outcomes = markets.map((m: any) => {
+      const prices = parseOutcomePrices(m.outcomePrices);
+      const firstPrice = prices[0] || 0;
+      return {
+        name: m.groupItemTitle || m.question,
+        percentage: Math.round(firstPrice * 100),
+        color: 'green',
+        price: firstPrice,
+      };
+    });
+  } else if (markets.length === 1) {
+    const m = markets[0];
+    const prices = parseOutcomePrices(m.outcomePrices);
+    const yesPrice = prices[0] || 0;
     outcomes = [
       {
         name: 'Yes',
@@ -193,8 +287,68 @@ function mapPolymarketEvent(event: any): MarketResult {
     ];
   }
 
+  // Fallback if no outcomes were created
+  if (outcomes.length === 0) {
+    outcomes = [
+      {
+        name: 'Yes',
+        percentage: 50,
+        color: 'green',
+        price: 0.5,
+      },
+      {
+        name: 'No',
+        percentage: 50,
+        color: 'red',
+        price: 0.5,
+      },
+    ];
+  }
+
   outcomes.sort((a: any, b: any) => b.percentage - a.percentage);
   const displayOutcomes = outcomes.slice(0, 2);
+
+  // Map child markets for active markets section
+  const childMarkets = markets.map((m: any) => {
+    const prices = parseOutcomePrices(m.outcomePrices);
+    const yesPrice = (prices[0] || 0) * 100;
+    const noPrice = (1 - (prices[0] || 0)) * 100;
+    
+    // Parse volume and liquidity (can be string or number)
+    const marketVolume = typeof m.volume === 'string' 
+      ? parseFloat(m.volume) || 0 
+      : (m.volume || m.volumeNum || 0);
+    const marketLiquidity = typeof m.liquidity === 'string'
+      ? parseFloat(m.liquidity) || 0
+      : (m.liquidity || m.liquidityNum || 0);
+    
+    return {
+      name: m.groupItemTitle || m.question || event.title,
+      shortName: m.groupItemTitle || m.question,
+      yesPrice: Math.round(yesPrice),
+      noPrice: Math.round(noPrice),
+      probability: Math.round(yesPrice),
+      volume: formatCurrency(marketVolume),
+      liquidity: formatCurrency(marketLiquidity),
+      ticker: m.id || m.clobTokenIds?.[0],
+    };
+  }).sort((a: any, b: any) => {
+    const probDiff = (b.probability || 0) - (a.probability || 0);
+    if (probDiff !== 0) return probDiff;
+    const volA = typeof a.volume === 'string' ? parseFloat(a.volume.replace(/[^0-9.]/g, '')) || 0 : a.volume || 0;
+    const volB = typeof b.volume === 'string' ? parseFloat(b.volume.replace(/[^0-9.]/g, '')) || 0 : b.volume || 0;
+    return volB - volA;
+  });
+
+  // Get volume from event (can be string or number)
+  const eventVolume = typeof event.volume === 'string' 
+    ? parseFloat(event.volume) || 0 
+    : (event.volume || event.volumeNum || 0);
+  
+  // Get liquidity from event (can be string or number)
+  const eventLiquidity = typeof event.liquidity === 'string'
+    ? parseFloat(event.liquidity) || 0
+    : (event.liquidity || event.liquidityNum || 0);
 
   return {
     id: `polymarket:${event.id}`,
@@ -202,21 +356,29 @@ function mapPolymarketEvent(event: any): MarketResult {
     title: event.title,
     icon: event.image || '🔵',
     outcomes: displayOutcomes,
-    volume: formatCurrency(event.volume || 0),
-    liquidity: formatCurrency(event.liquidity || 0),
-    date: new Date(event.endDate).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    }),
+    volume: formatCurrency(eventVolume),
+    liquidity: formatCurrency(eventLiquidity),
+    date: event.endDate
+      ? new Date(event.endDate).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+        })
+      : 'N/A',
     link: `https://polymarket.com/event/${event.slug}`,
+    markets: childMarkets,
   };
 }
 
-function formatCurrency(value: number): string {
-  if (value >= 1e9) return '$' + (value / 1e9).toFixed(1) + 'B';
-  if (value >= 1e6) return '$' + (value / 1e6).toFixed(1) + 'M';
-  if (value >= 1e3) return '$' + (value / 1e3).toFixed(1) + 'K';
-  return '$' + value.toFixed(0);
+function formatCurrency(value: number | string | undefined): string {
+  // Convert to number if string
+  const numValue = typeof value === 'string' 
+    ? parseFloat(value) || 0 
+    : (typeof value === 'number' ? value : 0);
+  
+  if (numValue >= 1e9) return '$' + (numValue / 1e9).toFixed(1) + 'B';
+  if (numValue >= 1e6) return '$' + (numValue / 1e6).toFixed(1) + 'M';
+  if (numValue >= 1e3) return '$' + (numValue / 1e3).toFixed(1) + 'K';
+  return '$' + numValue.toFixed(0);
 }
 
 const STOP_WORDS = new Set([

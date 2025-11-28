@@ -125,6 +125,7 @@ export async function getManifoldHistory(id: string): Promise<any[]> {
 function mapManifoldMarket(market: any): MarketResult {
   const prob = market.probability || 0.5;
   let outcomes = [];
+  let childMarkets: any[] = [];
 
   if (market.outcomeType === 'BINARY') {
     outcomes = [
@@ -141,6 +142,19 @@ function mapManifoldMarket(market: any): MarketResult {
         price: 1 - prob,
       },
     ];
+    // For binary markets, create a single child market
+    childMarkets = [
+      {
+        name: market.question,
+        shortName: market.question,
+        yesPrice: Math.round(prob * 100),
+        noPrice: Math.round((1 - prob) * 100),
+        probability: Math.round(prob * 100),
+        volume: 'M$' + formatNumber(market.volume || 0),
+        liquidity: 'M$' + formatNumber(market.liquidity || 0),
+        ticker: market.id,
+      },
+    ];
   } else if (market.outcomeType === 'MULTIPLE_CHOICE' && market.answers) {
     outcomes = market.answers
       .map((ans: any) => ({
@@ -150,6 +164,22 @@ function mapManifoldMarket(market: any): MarketResult {
         price: ans.probability,
       }))
       .sort((a: any, b: any) => b.percentage - a.percentage);
+    
+    // Map each answer as a child market
+    childMarkets = market.answers.map((ans: any) => ({
+      name: ans.text,
+      shortName: ans.text,
+      yesPrice: Math.round(ans.probability * 100),
+      noPrice: Math.round((1 - ans.probability) * 100),
+      probability: Math.round(ans.probability * 100),
+      volume: 'M$' + formatNumber(market.volume || 0),
+      liquidity: 'M$' + formatNumber(market.liquidity || 0),
+      ticker: `${market.id}-${ans.id}`,
+    })).sort((a: any, b: any) => {
+      const probDiff = (b.probability || 0) - (a.probability || 0);
+      if (probDiff !== 0) return probDiff;
+      return 0;
+    });
   } else {
     // Fallback or Pseudo-Numeric
     outcomes = [
@@ -158,6 +188,18 @@ function mapManifoldMarket(market: any): MarketResult {
         percentage: Math.round(prob * 100),
         color: 'green',
         price: prob,
+      },
+    ];
+    childMarkets = [
+      {
+        name: market.question,
+        shortName: market.question,
+        yesPrice: Math.round(prob * 100),
+        noPrice: Math.round((1 - prob) * 100),
+        probability: Math.round(prob * 100),
+        volume: 'M$' + formatNumber(market.volume || 0),
+        liquidity: 'M$' + formatNumber(market.liquidity || 0),
+        ticker: market.id,
       },
     ];
   }
@@ -177,6 +219,7 @@ function mapManifoldMarket(market: any): MarketResult {
         })
       : 'N/A',
     link: market.url,
+    markets: childMarkets,
   };
 }
 

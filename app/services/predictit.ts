@@ -177,6 +177,28 @@ function mapPredictItMarket(market: any): MarketResult {
 
   const totalVolume = getPredictItVolume(market);
 
+  // Map contracts as child markets for active markets section
+  const childMarkets = contracts.map((c: any) => {
+    const yesPrice = Math.round((c.bestBuyYesCost || c.lastTradePrice || 0) * 100);
+    const noPrice = Math.round((c.bestBuyNoCost || (1 - (c.bestBuyYesCost || c.lastTradePrice || 0))) * 100);
+    return {
+      name: c.name,
+      shortName: c.name,
+      yesPrice,
+      noPrice,
+      probability: yesPrice,
+      volume: formatVolume(c.totalSharesTraded || 0),
+      liquidity: 'N/A',
+      ticker: c.id?.toString(),
+    };
+  }).sort((a: any, b: any) => {
+    const probDiff = (b.probability || 0) - (a.probability || 0);
+    if (probDiff !== 0) return probDiff;
+    const volA = typeof a.volume === 'string' ? parseFloat(a.volume.replace(/[^0-9.]/g, '')) || 0 : a.volume || 0;
+    const volB = typeof b.volume === 'string' ? parseFloat(b.volume.replace(/[^0-9.]/g, '')) || 0 : b.volume || 0;
+    return volB - volA;
+  });
+
   return {
     id: `predictit:${market.id}`,
     platform: 'PredictIt',
@@ -192,6 +214,7 @@ function mapPredictItMarket(market: any): MarketResult {
         })
       : 'N/A',
     link: market.url,
+    markets: childMarkets,
   };
 }
 
