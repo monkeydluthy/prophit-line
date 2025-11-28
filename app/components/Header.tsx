@@ -14,8 +14,18 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [logoMarginLeft, setLogoMarginLeft] = useState('0px');
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const updateLogoMargin = () => {
+      setLogoMarginLeft(window.innerWidth >= 768 ? '100px' : '0px');
+    };
+    updateLogoMargin();
+    window.addEventListener('resize', updateLogoMargin);
+    return () => window.removeEventListener('resize', updateLogoMargin);
+  }, []);
 
   useEffect(() => {
     const q = searchParams.get('q');
@@ -101,7 +111,7 @@ export default function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#1f1f1f] bg-[#0a0a0a]">
         <div className="w-full max-w-[1600px] mx-auto px-4 md:px-12 h-16 flex items-center justify-between">
           {/* Left: Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center" style={{ marginLeft: logoMarginLeft }}>
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/final-logo.png"
@@ -116,7 +126,7 @@ export default function Header() {
 
           {/* Center: Search - Desktop Only */}
           <div className="hidden md:flex flex-1 justify-center px-8">
-            <div className="w-full max-w-[520px] relative" ref={wrapperRef}>
+            <div className="w-full max-w-[520px] relative md:mx-auto" ref={wrapperRef}>
               <form onSubmit={handleSearch} className="relative">
                 <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
                   <svg
