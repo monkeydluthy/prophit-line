@@ -48,19 +48,17 @@ export default function CategoryBar({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const volumeDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Listen for clicks on the mobile menu button in Header
+  // Listen for custom event from Header's hamburger button
   useEffect(() => {
-    const handleMenuButtonClick = () => {
+    const handleMenuToggle = () => {
       setMobileMenuOpen((prev) => !prev);
     };
 
-    const menuButton = document.getElementById('mobile-menu-button');
-    if (menuButton) {
-      menuButton.addEventListener('click', handleMenuButtonClick);
-      return () => {
-        menuButton.removeEventListener('click', handleMenuButtonClick);
-      };
-    }
+    document.addEventListener('toggleMobileMenu', handleMenuToggle);
+    
+    return () => {
+      document.removeEventListener('toggleMobileMenu', handleMenuToggle);
+    };
   }, []);
 
   useEffect(() => {

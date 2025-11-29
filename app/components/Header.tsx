@@ -223,6 +223,11 @@ export default function Header() {
             id="mobile-menu-button"
             className="md:hidden p-2 text-slate-300 hover:text-white transition-colors"
             style={{ paddingRight: '16px' }}
+            onClick={() => {
+              // Dispatch custom event for CategoryBar to listen
+              const event = new CustomEvent('toggleMobileMenu');
+              document.dispatchEvent(event);
+            }}
           >
             <svg
               className="w-6 h-6"
