@@ -135,11 +135,14 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [volumeFilter, setVolumeFilter] = useState('all');
-  const [contentMarginTop, setContentMarginTop] = useState('120px');
+  const [contentMarginTop, setContentMarginTop] = useState('140px');
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     const updateMargin = () => {
-      setContentMarginTop(window.innerWidth >= 768 ? '24px' : '120px');
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setContentMarginTop(mobile ? '140px' : '24px');
     };
     updateMargin();
     window.addEventListener('resize', updateMargin);
@@ -242,8 +245,14 @@ export default function Home() {
 
       {/* Main Content Grid - Centered */}
       <div 
-        className="w-full max-w-[1600px] mx-auto px-12 pb-8"
-        style={{ marginTop: contentMarginTop }}
+        className="w-full max-w-[1600px] mx-auto md:px-12 pb-8"
+        style={isMobile ? {
+          marginTop: contentMarginTop,
+          paddingLeft: '16px',
+          paddingRight: '16px',
+        } : {
+          marginTop: contentMarginTop,
+        }}
       >
         {loading ? (
           <div className="flex flex-col justify-center items-center h-64">

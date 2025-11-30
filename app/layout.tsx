@@ -5,6 +5,7 @@ import './globals.css';
 import Link from 'next/link';
 import Image from 'next/image';
 import Header from './components/Header';
+import BottomNav from './components/BottomNav';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,7 +38,11 @@ export default function RootLayout({
         </Suspense>
         <div className="animated-bg" />
 
-        <main className="min-h-screen w-full">{children}</main>
+        <main className="min-h-screen w-full pb-16 md:pb-0">{children}</main>
+        
+        <Suspense fallback={null}>
+          <BottomNav />
+        </Suspense>
       </body>
     </html>
   );
