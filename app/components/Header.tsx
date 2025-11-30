@@ -86,7 +86,10 @@ export default function Header() {
 
   const handleSelectMarket = (marketId: string) => {
     setShowDropdown(false);
-    router.push(`/market/${encodeURIComponent(marketId)}`);
+    // Use setTimeout to ensure state update completes before navigation
+    setTimeout(() => {
+      router.push(`/market/${encodeURIComponent(marketId)}`);
+    }, 0);
   };
 
   const formatVolumeLabel = (volume: number | string) => {

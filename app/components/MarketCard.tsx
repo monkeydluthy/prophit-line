@@ -36,11 +36,17 @@ export default function MarketCard({
   const router = useRouter();
   const styles = getPlatformStyles(market.platform);
 
-  const handleClick = () => {
+  const handleClick = (e: React.MouseEvent) => {
     if (onNavigate) {
       onNavigate();
     } else {
-      router.push(`/market/${encodeURIComponent(market.id)}`);
+      const path = `/market/${encodeURIComponent(market.id)}`;
+      // Use window.location on mobile for more reliable navigation
+      if (typeof window !== 'undefined' && window.innerWidth < 768) {
+        window.location.href = path;
+      } else {
+        router.push(path);
+      }
     }
   };
 
@@ -52,16 +58,8 @@ export default function MarketCard({
       className={`bg-[#131313] border border-[#222] rounded-xl hover:border-[#333] transition-all cursor-pointer group flex flex-col h-full relative shadow-sm min-h-[440px] ${className}`}
       style={{ 
         padding: '32px',
-        touchAction: 'manipulation',
-        WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
       }}
       onClick={handleClick}
-      onTouchStart={(e) => {
-        // Prevent double-tap zoom on mobile
-        if (e.touches.length > 1) {
-          e.preventDefault();
-        }
-      }}
     >
       <div className="flex items-start gap-3 mb-8">
         <div className="w-12 h-12 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-3xl shrink-0 shadow-sm group-hover:border-[#333] transition-colors overflow-hidden">

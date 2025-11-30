@@ -85,7 +85,12 @@ export default function BottomNav() {
               
               // Show loader for a moment, then navigate
               setTimeout(() => {
-                router.push('/');
+                // Use window.location on mobile for more reliable navigation
+                if (typeof window !== 'undefined' && window.innerWidth < 768) {
+                  window.location.href = '/';
+                } else {
+                  router.push('/');
+                }
                 // Reset loading after navigation starts
                 setTimeout(() => setIsPortfolioLoading(false), 300);
               }, 500);
@@ -94,15 +99,23 @@ export default function BottomNav() {
             return (
               <button
                 key={item.path}
-                onClick={handlePortfolioClick}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handlePortfolioClick();
+                }}
                 disabled={isPortfolioLoading}
                 className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors cursor-pointer bg-transparent border-none disabled:opacity-75"
                 style={{ 
                   background: 'transparent', 
                   border: 'none', 
                   outline: 'none',
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flex: 1,
+                  height: '100%',
                 }}
               >
                 <div
@@ -155,8 +168,20 @@ export default function BottomNav() {
               href={item.path}
               className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors"
               style={{
-                touchAction: 'manipulation',
-                WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                height: '100%',
+                textDecoration: 'none',
+              }}
+              onClick={(e) => {
+                // Force navigation on mobile if Link doesn't work
+                if (window.innerWidth < 768) {
+                  e.preventDefault();
+                  window.location.href = item.path;
+                }
               }}
             >
               <div
