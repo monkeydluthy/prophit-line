@@ -7,7 +7,6 @@ export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
-  const navigatingRef = useRef<Set<string>>(new Set());
 
   const navItems = [
     {
