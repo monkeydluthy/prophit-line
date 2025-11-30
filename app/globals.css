@@ -31,6 +31,10 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overflow-x: hidden;
+  /* Mobile touch optimizations */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 .font-heading {
@@ -46,6 +50,7 @@ body {
   height: 100%;
   z-index: 0;
   overflow: hidden;
+  pointer-events: none; /* Prevent blocking clicks */
 }
 
 .animated-bg::before {
@@ -243,4 +248,25 @@ img[src*="logo"], img[src*="final-logo"] {
 
 .spinner-icon {
   animation: spin 1s linear infinite;
+}
+
+/* Mobile touch optimizations */
+button,
+a,
+[role="button"],
+[onclick],
+.cursor-pointer {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(16, 185, 129, 0.2);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Ensure clickable elements respond immediately on mobile */
+button:active,
+a:active,
+[role="button"]:active {
+  opacity: 0.8;
+  transform: scale(0.98);
+  transition: opacity 0.1s, transform 0.1s;
 }

@@ -103,7 +103,11 @@ export default function CategoryBar({
                   onClick={() => {
                     onPlatformToggle?.(platform.name);
                   }}
-                  style={{ padding: '8px 14px' }}
+                  style={{ 
+                    padding: '8px 14px',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                  }}
                   className={`rounded-xl text-xs font-medium transition-all flex items-center gap-2 cursor-pointer ${
                     isSelected
                       ? 'bg-[#2a2a2a] text-white border-2 border-blue-500/50 shadow-sm'

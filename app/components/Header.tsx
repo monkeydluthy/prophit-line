@@ -170,7 +170,12 @@ export default function Header() {
                           <button
                             key={market.id}
                             className="flex items-center gap-3 px-4 py-3 hover:bg-[#181818] text-left rounded-2xl border border-[#161616] hover:border-[#2a2a2a] transition-colors"
-                            style={{ marginLeft: '4px', marginRight: '8px' }}
+                            style={{ 
+                              marginLeft: '4px', 
+                              marginRight: '8px',
+                              touchAction: 'manipulation',
+                              WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                            }}
                             onClick={() => handleSelectMarket(market.id)}
                           >
                             <div className="w-10 h-10 rounded-xl bg-[#1f1f1f] border border-[#2a2a2a] flex items-center justify-center text-2xl overflow-hidden">
@@ -204,6 +209,10 @@ export default function Header() {
                       </div>
                       <button
                         className="w-full text-center text-[12px] text-slate-300 py-3 mt-3 rounded-xl border border-[#1f1f1f] hover:text-white hover:border-[#2a2a2a] transition-colors"
+                        style={{
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                        }}
                         onClick={() => {
                           setShowDropdown(false);
                           router.push(`/results?q=${encodeURIComponent(query)}`);
@@ -228,6 +237,8 @@ export default function Header() {
               paddingLeft: '8px',
               paddingTop: '8px',
               paddingBottom: '8px',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
             }}
           >
             <div className="w-9 h-9 rounded-full bg-[#1a1a1a] border border-[#2a2a2a] flex items-center justify-center hover:bg-[#222] hover:border-[#333] transition-colors">
@@ -295,6 +306,10 @@ export default function Header() {
                       <button
                         key={market.id}
                         className="flex items-center gap-3 px-3 py-2.5 hover:bg-[#181818] text-left rounded-xl border border-[#161616] hover:border-[#2a2a2a] transition-colors"
+                        style={{
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                        }}
                         onClick={() => handleSelectMarket(market.id)}
                       >
                         <div className="w-8 h-8 rounded-lg bg-[#1f1f1f] border border-[#2a2a2a] flex items-center justify-center text-lg overflow-hidden shrink-0">
@@ -328,6 +343,10 @@ export default function Header() {
                   </div>
                   <button
                     className="w-full text-center text-[11px] text-slate-300 py-2.5 mt-2 rounded-xl border border-[#1f1f1f] hover:text-white hover:border-[#2a2a2a] transition-colors"
+                    style={{
+                      touchAction: 'manipulation',
+                      WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                    }}
                     onClick={() => {
                       setShowDropdown(false);
                       router.push(`/results?q=${encodeURIComponent(query)}`);

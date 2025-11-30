@@ -97,7 +97,13 @@ export default function BottomNav() {
                 onClick={handlePortfolioClick}
                 disabled={isPortfolioLoading}
                 className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors cursor-pointer bg-transparent border-none disabled:opacity-75"
-                style={{ background: 'transparent', border: 'none', outline: 'none' }}
+                style={{ 
+                  background: 'transparent', 
+                  border: 'none', 
+                  outline: 'none',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+                }}
               >
                 <div
                   className={`transition-colors ${
@@ -148,6 +154,10 @@ export default function BottomNav() {
               key={item.path}
               href={item.path}
               className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors"
+              style={{
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(16, 185, 129, 0.2)',
+              }}
             >
               <div
                 className={`transition-colors ${
