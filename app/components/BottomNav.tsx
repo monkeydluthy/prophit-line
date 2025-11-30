@@ -1,10 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
 
   const navItems = [
     {
@@ -70,7 +73,76 @@ export default function BottomNav() {
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#0a0a0a] border-t border-[#1f1f1f]">
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
-          const isActive = pathname === item.path;
+          const isPortfolio = item.label === 'Portfolio';
+          const isActive = isPortfolio ? false : pathname === item.path; // Portfolio never shows as active
+          
+          if (isPortfolio) {
+            // Portfolio redirects to home page (markets) with loading state
+            const handlePortfolioClick = () => {
+              if (pathname === '/') return; // Already on markets page
+              
+              setIsPortfolioLoading(true);
+              
+              // Show loader for a moment, then navigate
+              setTimeout(() => {
+                router.push('/');
+                // Reset loading after navigation starts
+                setTimeout(() => setIsPortfolioLoading(false), 300);
+              }, 500);
+            };
+            
+            return (
+              <button
+                key={item.path}
+                onClick={handlePortfolioClick}
+                disabled={isPortfolioLoading}
+                className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors cursor-pointer bg-transparent border-none disabled:opacity-75"
+                style={{ background: 'transparent', border: 'none', outline: 'none' }}
+              >
+                <div
+                  className={`transition-colors ${
+                    isActive ? 'text-emerald-500' : 'text-slate-500'
+                  }`}
+                >
+                  {isPortfolioLoading ? (
+                    <svg
+                      className="spinner-icon"
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                      }}
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        style={{ opacity: 0.25 }}
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        style={{ opacity: 0.75 }}
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                  ) : (
+                    item.icon
+                  )}
+                </div>
+                <span
+                  className={`text-xs font-medium transition-colors ${
+                    isActive ? 'text-emerald-500' : 'text-slate-500'
+                  }`}
+                >
+                  {item.label}
+                </span>
+              </button>
+            );
+          }
+          
           return (
             <Link
               key={item.path}

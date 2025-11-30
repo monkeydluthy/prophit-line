@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getMarketHistory } from "@/app/services/marketService";
+import { getMarketHistory, getMarketHistoryMultiOutcome } from "@/app/services/marketService";
 
 export async function GET(
   request: NextRequest,
@@ -7,18 +7,33 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-    // Parse timeframe from query params if needed? Default to 'ALL' or '7D'.
-    // For now, we fetch standard history.
-    const history = await getMarketHistory(id);
     
-    if (!history) {
-        return NextResponse.json([], { status: 200 }); // Return empty array instead of 404 for better UI handling
+    // Try to get multi-outcome history first
+    const multiOutcomeHistory = await getMarketHistoryMultiOutcome(id);
+    
+    if (multiOutcomeHistory && multiOutcomeHistory.outcomes && multiOutcomeHistory.outcomes.length > 0) {
+      // Return multi-outcome format
+      return NextResponse.json(multiOutcomeHistory);
     }
     
-    return NextResponse.json(history);
+    // Fallback to single-outcome history for backward compatibility
+    const history = await getMarketHistory(id);
+    
+    if (!history || history.length === 0) {
+        return NextResponse.json({ outcomes: [] }, { status: 200 });
+    }
+    
+    // Convert single-outcome format to multi-outcome format
+    return NextResponse.json({
+      outcomes: [{
+        index: 0,
+        name: 'Primary',
+        data: history,
+      }],
+    });
   } catch (error) {
     console.error("History API error:", error);
-    return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to fetch history", outcomes: [] }, { status: 500 });
   }
 }
 

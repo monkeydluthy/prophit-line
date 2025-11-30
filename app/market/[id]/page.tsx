@@ -11,6 +11,11 @@ export default function MarketPage() {
   const params = useParams();
   const [market, setMarket] = useState<MarketResult | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+  const [historyOutcomes, setHistoryOutcomes] = useState<Array<{
+    index: number;
+    name: string;
+    data: Array<{ time: number; value: number }>;
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [selectedTimeframe, setTimeframe] = useState('ALL');
@@ -53,15 +58,45 @@ export default function MarketPage() {
       if (!params.id) return;
       try {
         setLoadingHistory(true);
-        // Fetch history - could be enhanced to filter by selected outcome/market
         const res = await fetch(`/api/market/${params.id}/history`);
         const data = await res.json();
-        if (Array.isArray(data)) {
+        
+        // Check if we got multi-outcome format
+        if (data.outcomes && Array.isArray(data.outcomes)) {
+          console.log(`Fetched multi-outcome history: ${data.outcomes.length} outcomes`);
+          
+          // Filter by timeframe for each outcome
+          const now = Date.now();
+          const filteredOutcomes = data.outcomes.map((outcome: any) => {
+            let filteredData = outcome.data;
+            
+            if (selectedTimeframe === '1H') {
+              filteredData = outcome.data.filter((d: any) => d.time >= now - 60 * 60 * 1000);
+            } else if (selectedTimeframe === '24H') {
+              filteredData = outcome.data.filter((d: any) => d.time >= now - 24 * 60 * 60 * 1000);
+            } else if (selectedTimeframe === '7D') {
+              filteredData = outcome.data.filter((d: any) => d.time >= now - 7 * 24 * 60 * 60 * 1000);
+            } else if (selectedTimeframe === '30D') {
+              filteredData = outcome.data.filter((d: any) => d.time >= now - 30 * 24 * 60 * 60 * 1000);
+            }
+            
+            // Sort by time
+            filteredData.sort((a: any, b: any) => a.time - b.time);
+            
+            return {
+              ...outcome,
+              data: filteredData,
+            };
+          });
+          
+          setHistoryOutcomes(filteredOutcomes);
+          // Set first outcome as main history for backward compatibility
+          setHistory(filteredOutcomes[0]?.data || []);
+        } else if (Array.isArray(data)) {
+          // Backward compatibility: single array format
           console.log(`Fetched history: ${data.length} points`);
-          // Sort by time to prevent chart artifacts
           data.sort((a: any, b: any) => a.time - b.time);
           
-          // Filter by timeframe if needed
           let filteredData = data;
           const now = Date.now();
           if (selectedTimeframe === '1H') {
@@ -73,14 +108,22 @@ export default function MarketPage() {
           } else if (selectedTimeframe === '30D') {
             filteredData = data.filter((d: any) => d.time >= now - 30 * 24 * 60 * 60 * 1000);
           }
-          // 'ALL' uses all data
           
           setHistory(filteredData);
+          setHistoryOutcomes([{
+            index: 0,
+            name: 'Primary',
+            data: filteredData,
+          }]);
         } else {
-          console.warn('History API returned non-array:', data);
+          console.warn('History API returned unexpected format:', data);
+          setHistory([]);
+          setHistoryOutcomes([]);
         }
       } catch (error) {
         console.error('Error fetching history:', error);
+        setHistory([]);
+        setHistoryOutcomes([]);
       } finally {
         setLoadingHistory(false);
       }
@@ -165,6 +208,19 @@ export default function MarketPage() {
     }
     
     return filtered;
+  };
+
+  // Get color for outcome by index (matching reference image colors)
+  const getOutcomeColor = (index: number): string => {
+    const colors = [
+      '#10b981', // emerald-500 (green)
+      '#3b82f6', // blue-500 (blue)
+      '#f97316', // orange-500 (orange)
+      '#ef4444', // red-500 (red)
+      '#a855f7', // purple-500 (purple)
+      '#eab308', // yellow-500 (yellow)
+    ];
+    return colors[index] || colors[index % colors.length];
   };
 
   const generateSmoothPath = (
@@ -618,7 +674,7 @@ export default function MarketPage() {
                         <div className="absolute inset-0 flex items-center justify-center text-slate-500">
                           Loading chart data...
                         </div>
-                      ) : history.length > 0 ? (
+                      ) : (historyOutcomes.length > 0 || history.length > 0) ? (
                         <svg
                           viewBox="0 0 1000 450"
                           className="w-full h-full"
@@ -645,26 +701,62 @@ export default function MarketPage() {
                             <text x="50" y="0">Start</text>
                             <text x="950" y="0" textAnchor="end">Now</text>
                           </g>
-                          {/* Chart paths */}
+                          {/* Chart paths - Multiple outcomes */}
                           <g transform="scale(1, 1)">
-                            <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
-                              <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
-                            </linearGradient>
-                            <path
-                              d={generateSmoothPath(history, 1000, 450, true)}
-                              fill="url(#chartGradient)"
-                              stroke="none"
-                              vectorEffect="non-scaling-stroke"
-                            />
-                            <path
-                              d={generateSmoothPath(history, 1000, 450)}
-                              fill="none"
-                              stroke="#10b981"
-                              strokeWidth="2"
-                              vectorEffect="non-scaling-stroke"
-                              className="hover:stroke-[3px] transition-all cursor-pointer"
-                            />
+                            {historyOutcomes.length > 0 ? (
+                              // Multi-outcome rendering
+                              historyOutcomes.map((outcome, idx) => {
+                                const color = getOutcomeColor(idx);
+                                return (
+                                  <g key={`outcome-${idx}`}>
+                                    <linearGradient id={`chartGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+                                      <stop offset="100%" stopColor={color} stopOpacity="0" />
+                                    </linearGradient>
+                                    {outcome.data.length > 1 && (
+                                      <>
+                                        <path
+                                          d={generateSmoothPath(outcome.data, 1000, 450, true)}
+                                          fill={`url(#chartGradient-${idx})`}
+                                          stroke="none"
+                                          vectorEffect="non-scaling-stroke"
+                                        />
+                                        <path
+                                          d={generateSmoothPath(outcome.data, 1000, 450, false)}
+                                          fill="none"
+                                          stroke={color}
+                                          strokeWidth="2"
+                                          vectorEffect="non-scaling-stroke"
+                                          className="hover:stroke-[3px] transition-all cursor-pointer"
+                                        />
+                                      </>
+                                    )}
+                                  </g>
+                                );
+                              })
+                            ) : (
+                              // Single outcome (backward compatibility)
+                              <>
+                                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.2" />
+                                  <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                                </linearGradient>
+                                <path
+                                  d={generateSmoothPath(history, 1000, 450, true)}
+                                  fill="url(#chartGradient)"
+                                  stroke="none"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                                <path
+                                  d={generateSmoothPath(history, 1000, 450)}
+                                  fill="none"
+                                  stroke="#10b981"
+                                  strokeWidth="2"
+                                  vectorEffect="non-scaling-stroke"
+                                  className="hover:stroke-[3px] transition-all cursor-pointer"
+                                />
+                              </>
+                            )}
                           </g>
                         </svg>
                       ) : (
@@ -723,7 +815,7 @@ export default function MarketPage() {
                           </div>
                           <p className="text-sm text-slate-400 animate-pulse">Loading chart data...</p>
                         </div>
-                      ) : history.length > 0 ? (
+                      ) : (historyOutcomes.length > 0 || history.length > 0) ? (
                         <svg
                           viewBox="0 0 1000 400"
                           className="w-full h-full"
@@ -761,8 +853,11 @@ export default function MarketPage() {
                             className="text-[10px] fill-[#666] font-medium select-none"
                           >
                             {(() => {
-                              const minTime = history[0]?.time || Date.now();
-                              const maxTime = history[history.length - 1]?.time || Date.now();
+                              const allData = historyOutcomes.length > 0 
+                                ? historyOutcomes.flatMap(o => o.data)
+                                : history;
+                              const minTime = allData[0]?.time || Date.now();
+                              const maxTime = allData[allData.length - 1]?.time || Date.now();
                               const timeRange = maxTime - minTime || 1;
                               const numLabels = 6;
                               const labels = [];
@@ -782,40 +877,76 @@ export default function MarketPage() {
                               return labels;
                             })()}
                           </g>
-                          {/* Chart paths */}
+                          {/* Chart paths - Multiple outcomes */}
                           <g transform="scale(1, 1)">
-                            <linearGradient
-                              id="chartGradient"
-                              x1="0"
-                              y1="0"
-                              x2="0"
-                              y2="1"
-                            >
-                              <stop
-                                offset="0%"
-                                stopColor="#10b981"
-                                stopOpacity="0.2"
-                              />
-                              <stop
-                                offset="100%"
-                                stopColor="#10b981"
-                                stopOpacity="0"
-                              />
-                            </linearGradient>
-                            <path
-                              d={generateSmoothPath(history, 1000, 400, true)}
-                              fill="url(#chartGradient)"
-                              stroke="none"
-                              vectorEffect="non-scaling-stroke"
-                            />
-                            <path
-                              d={generateSmoothPath(history, 1000, 400)}
-                              fill="none"
-                              stroke="#10b981"
-                              strokeWidth="2"
-                              vectorEffect="non-scaling-stroke"
-                              className="hover:stroke-[3px] transition-all cursor-pointer"
-                            />
+                            {historyOutcomes.length > 0 ? (
+                              // Multi-outcome rendering
+                              historyOutcomes.map((outcome, idx) => {
+                                const color = getOutcomeColor(idx);
+                                return (
+                                  <g key={`mobile-outcome-${idx}`}>
+                                    <linearGradient id={`mobileChartGradient-${idx}`} x1="0" y1="0" x2="0" y2="1">
+                                      <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+                                      <stop offset="100%" stopColor={color} stopOpacity="0" />
+                                    </linearGradient>
+                                    {outcome.data.length > 1 && (
+                                      <>
+                                        <path
+                                          d={generateSmoothPath(outcome.data, 1000, 400, true)}
+                                          fill={`url(#mobileChartGradient-${idx})`}
+                                          stroke="none"
+                                          vectorEffect="non-scaling-stroke"
+                                        />
+                                        <path
+                                          d={generateSmoothPath(outcome.data, 1000, 400, false)}
+                                          fill="none"
+                                          stroke={color}
+                                          strokeWidth="2"
+                                          vectorEffect="non-scaling-stroke"
+                                          className="hover:stroke-[3px] transition-all cursor-pointer"
+                                        />
+                                      </>
+                                    )}
+                                  </g>
+                                );
+                              })
+                            ) : (
+                              // Single outcome (backward compatibility)
+                              <>
+                                <linearGradient
+                                  id="chartGradient"
+                                  x1="0"
+                                  y1="0"
+                                  x2="0"
+                                  y2="1"
+                                >
+                                  <stop
+                                    offset="0%"
+                                    stopColor="#10b981"
+                                    stopOpacity="0.2"
+                                  />
+                                  <stop
+                                    offset="100%"
+                                    stopColor="#10b981"
+                                    stopOpacity="0"
+                                  />
+                                </linearGradient>
+                                <path
+                                  d={generateSmoothPath(history, 1000, 400, true)}
+                                  fill="url(#chartGradient)"
+                                  stroke="none"
+                                  vectorEffect="non-scaling-stroke"
+                                />
+                                <path
+                                  d={generateSmoothPath(history, 1000, 400)}
+                                  fill="none"
+                                  stroke="#10b981"
+                                  strokeWidth="2"
+                                  vectorEffect="non-scaling-stroke"
+                                  className="hover:stroke-[3px] transition-all cursor-pointer"
+                                />
+                              </>
+                            )}
                           </g>
                         </svg>
                       ) : (
@@ -1391,10 +1522,8 @@ export default function MarketPage() {
               <div
                 style={{
                   display: 'flex',
-                  justifyContent: 'space-between',
                   alignItems: 'center',
                   marginBottom: '24px',
-                  flexWrap: 'wrap',
                   gap: '12px',
                 }}
               >
@@ -1456,44 +1585,11 @@ export default function MarketPage() {
                     {filteredActiveMarkets.length || 0}
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                  }}
-                >
-                  <select
-                    value={volumeFilter}
-                    onChange={(e) => {
-                      setVolumeFilter(e.target.value);
-                      setSelectedMarketIdx(0);
-                    }}
-                    style={{
-                      backgroundColor: '#1a1a1a',
-                      border: '1px solid #333',
-                      borderRadius: '8px',
-                      padding: '6px 12px',
-                      color: '#94a3b8',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      outline: 'none',
-                    }}
-                    className="hover:border-[#444] transition-all"
-                  >
-                    <option value="all">All Volume</option>
-                    <option value="high">High ($10K+)</option>
-                    <option value="medium">Medium ($1K-$10K)</option>
-                    <option value="low">Low (&lt;$1K)</option>
-                  </select>
-                </div>
               </div>
 
               {filteredActiveMarkets.length === 0 ? (
                 <div className="text-center text-slate-500 py-12 border border-dashed border-[#222] rounded-xl">
-                  {volumeFilter === 'all' 
-                    ? 'No active markets surfaced for this event yet.'
-                    : `No markets found with ${volumeFilter} volume.`}
+                  No active markets surfaced for this event yet.
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">

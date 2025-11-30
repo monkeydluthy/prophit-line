@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { MarketResult } from '@/types';
+import WaitingListModal from './WaitingListModal';
 
 export default function Header() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [logoMarginLeft, setLogoMarginLeft] = useState('0px');
+  const [showWaitingListModal, setShowWaitingListModal] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -219,6 +221,7 @@ export default function Header() {
 
           {/* Right: Sign In - Mobile and Desktop */}
           <button 
+            onClick={() => setShowWaitingListModal(true)}
             className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
             style={{
               paddingRight: '16px',
@@ -339,6 +342,11 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Waiting List Modal */}
+      <WaitingListModal
+        isOpen={showWaitingListModal}
+        onClose={() => setShowWaitingListModal(false)}
+      />
     </>
   );
 }
