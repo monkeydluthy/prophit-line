@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MarketResult } from '@/types';
@@ -36,18 +37,23 @@ export default function MarketCard({
   const router = useRouter();
   const styles = getPlatformStyles(market.platform);
 
-  const handleClick = (e: React.MouseEvent) => {
+  const navigateToMarket = () => {
     if (onNavigate) {
       onNavigate();
-    } else {
-      const path = `/market/${encodeURIComponent(market.id)}`;
-      // Use window.location on mobile for more reliable navigation
-      if (typeof window !== 'undefined' && window.innerWidth < 768) {
-        window.location.href = path;
-      } else {
-        router.push(path);
-      }
+      return;
     }
+    
+    const path = `/market/${encodeURIComponent(market.id)}`;
+    // Always use window.location on mobile for immediate, reliable navigation
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      window.location.href = path;
+    } else {
+      router.push(path);
+    }
+  };
+
+  const handleInteraction = () => {
+    navigateToMarket();
   };
 
   return (
@@ -56,10 +62,15 @@ export default function MarketCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className={`bg-[#131313] border border-[#222] rounded-xl hover:border-[#333] transition-all cursor-pointer group flex flex-col h-full relative shadow-sm min-h-[440px] ${className}`}
+      onClick={handleInteraction}
+      onTouchEnd={(e) => {
+        // Don't prevent default - let it work naturally
+        handleInteraction();
+      }}
       style={{ 
         padding: '32px',
+        cursor: 'pointer',
       }}
-      onClick={handleClick}
     >
       <div className="flex items-start gap-3 mb-8">
         <div className="w-12 h-12 rounded-2xl bg-[#1c1c1c] border border-[#2a2a2a] flex items-center justify-center text-3xl shrink-0 shadow-sm group-hover:border-[#333] transition-colors overflow-hidden">

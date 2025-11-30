@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 export default function BottomNav() {
   const pathname = usePathname();
   const router = useRouter();
   const [isPortfolioLoading, setIsPortfolioLoading] = useState(false);
+  const navigatingRef = useRef<Set<string>>(new Set());
 
   const navItems = [
     {
@@ -104,6 +104,11 @@ export default function BottomNav() {
                   e.stopPropagation();
                   handlePortfolioClick();
                 }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handlePortfolioClick();
+                }}
                 disabled={isPortfolioLoading}
                 className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors cursor-pointer bg-transparent border-none disabled:opacity-75"
                 style={{ 
@@ -162,11 +167,14 @@ export default function BottomNav() {
             );
           }
           
+          // BottomNav is mobile-only, so always use buttons for reliable navigation
           return (
-            <Link
+            <button
               key={item.path}
-              href={item.path}
-              className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors"
+              onClick={() => {
+                window.location.href = item.path;
+              }}
+              className="flex flex-col items-center justify-center gap-1 flex-1 h-full transition-colors bg-transparent border-none"
               style={{
                 display: 'flex',
                 flexDirection: 'column',
@@ -174,14 +182,8 @@ export default function BottomNav() {
                 justifyContent: 'center',
                 flex: 1,
                 height: '100%',
-                textDecoration: 'none',
-              }}
-              onClick={(e) => {
-                // Force navigation on mobile if Link doesn't work
-                if (window.innerWidth < 768) {
-                  e.preventDefault();
-                  window.location.href = item.path;
-                }
+                cursor: 'pointer',
+                outline: 'none',
               }}
             >
               <div
@@ -198,7 +200,7 @@ export default function BottomNav() {
               >
                 {item.label}
               </span>
-            </Link>
+            </button>
           );
         })}
       </div>
