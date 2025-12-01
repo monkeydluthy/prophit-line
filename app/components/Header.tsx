@@ -115,7 +115,7 @@ export default function Header() {
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-[#1f1f1f] bg-[#0a0a0a]">
         <div className="w-full max-w-[1600px] mx-auto px-4 md:px-12 h-16 flex items-center justify-between">
           {/* Left: Logo */}
-          <div className="flex items-center" style={{ marginLeft: logoMarginLeft }}>
+          <div className="flex items-center gap-6" style={{ marginLeft: logoMarginLeft }}>
             <Link href="/" className="flex items-center gap-2">
               <Image
                 src="/final-logo.png"
@@ -125,6 +125,13 @@ export default function Header() {
                 className="w-8 h-8 md:w-10 md:h-10"
               />
               <span className="text-lg md:text-xl font-bold text-white">ProphitLine</span>
+            </Link>
+            {/* Matches Link - Desktop Only */}
+            <Link 
+              href="/prophitline"
+              className="hidden md:inline-block text-sm text-slate-300 hover:text-white transition-colors font-medium"
+            >
+              Matches
             </Link>
           </div>
 
