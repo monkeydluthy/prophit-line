@@ -20,11 +20,13 @@ interface ArbitrageOpportunity {
     market: any;
     price: number;
     platform: string;
+    outcomeIndex?: number; // Index of the matched outcome
   };
   bestSell: {
     market: any;
     price: number;
     platform: string;
+    outcomeIndex?: number; // Index of the matched outcome
   };
   totalVolume: number;
   avgLiquidity: number;
@@ -53,20 +55,43 @@ export default function ProphitLinePage() {
   }, []);
 
   useEffect(() => {
+    // Only fetch on initial load, not automatically
     if (isLiveMatching) {
       fetchOpportunities();
-      // Refresh every 60 seconds (less frequent)
-      const interval = setInterval(fetchOpportunities, 60000);
-      return () => clearInterval(interval);
     }
-  }, [isLiveMatching, minSpread]);
+  }, [isLiveMatching]);
 
   const fetchOpportunities = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/arbitrage?limit=300&minSpread=${minSpread}`);
+      const response = await fetch(`/api/arbitrage?limit=500&minSpread=${minSpread}&source=embeddings`);
       const data = await response.json();
+      
+      // Debug logging
+      console.log('[ProphitLine] API Response:', {
+        hasOpportunities: !!data.opportunities,
+        count: data.count,
+        opportunitiesLength: data.opportunities?.length || 0,
+        source: data.source,
+        sample: data.opportunities?.[0],
+      });
+      
       setOpportunities(data.opportunities || []);
+      
+      if (data.opportunities && data.opportunities.length > 0) {
+        console.log(`[ProphitLine] Loaded ${data.opportunities.length} opportunities`);
+        console.log(`[ProphitLine] Sample opportunity:`, {
+          id: data.opportunities[0].id,
+          title: data.opportunities[0].title,
+          maxSpread: data.opportunities[0].maxSpread,
+          bestBuy: data.opportunities[0].bestBuy?.platform,
+          bestSell: data.opportunities[0].bestSell?.platform,
+          hasMarkets: !!data.opportunities[0].markets,
+        });
+      } else {
+        console.log('[ProphitLine] No opportunities in response');
+        console.log('[ProphitLine] Response data:', data);
+      }
     } catch (error) {
       console.error('Error fetching opportunities:', error);
     } finally {
@@ -77,12 +102,32 @@ export default function ProphitLinePage() {
   const sortedOpportunities = [...opportunities]
     .filter(opp => {
       // Apply spread filter
-      if (opp.maxSpread < minSpread) return false;
+      if (opp.maxSpread < minSpread) {
+        if (opportunities.length <= 10) {
+          console.log(`[ProphitLine] Filtered out: "${opp.title}" (spread ${opp.maxSpread.toFixed(2)}% < ${minSpread}%)`);
+        }
+        return false;
+      }
       
-      // Apply liquidity filter - check if both markets meet the threshold
-      const buyVolume = parseVolume(opp.bestBuy.market.volume || 0);
-      const sellVolume = parseVolume(opp.bestSell.market.volume || 0);
-      return buyVolume >= liquidityFilter && sellVolume >= liquidityFilter;
+      // Apply liquidity filter - at least one market should meet the threshold
+      // For very low filters (0-1), be lenient and only require one market to have volume
+      const buyVolume = parseVolume(opp.bestBuy.market?.volume || 0);
+      const sellVolume = parseVolume(opp.bestSell.market?.volume || 0);
+      
+      // If filter is very low (0 or 1), only require at least one market to have volume
+      let passesLiquidity: boolean;
+      if (liquidityFilter <= 1) {
+        passesLiquidity = buyVolume > 0 || sellVolume > 0;
+      } else {
+        // For higher filters, require at least one market to meet threshold
+        passesLiquidity = buyVolume >= liquidityFilter || sellVolume >= liquidityFilter;
+      }
+      
+      if (!passesLiquidity && opportunities.length <= 10) {
+        console.log(`[ProphitLine] Filtered out: "${opp.title}" (liquidity: buy=${buyVolume}, sell=${sellVolume}, filter=${liquidityFilter})`);
+      }
+      
+      return passesLiquidity;
     })
     .sort((a, b) => {
       if (sortBy === 'spread') {
@@ -91,6 +136,11 @@ export default function ProphitLinePage() {
         return b.totalVolume - a.totalVolume;
       }
     });
+
+  // Debug: Log filtering results
+  if (opportunities.length > 0) {
+    console.log(`[ProphitLine] Filtering: ${opportunities.length} total → ${sortedOpportunities.length} after filters (minSpread=${minSpread}%, liquidity=${liquidityFilter})`);
+  }
 
   // Calculate metrics
   const activePairs = opportunities.length;
@@ -101,10 +151,13 @@ export default function ProphitLinePage() {
   const totalVolume = opportunities.reduce((sum, o) => sum + o.totalVolume, 0);
 
   const formatCurrency = (value: number): string => {
-    if (value >= 1_000_000_000) return `$${(value / 1_000_000_000).toFixed(1)}B`;
-    if (value >= 1_000_000) return `$${(value / 1_000_000).toFixed(1)}M`;
-    if (value >= 1_000) return `$${(value / 1_000).toFixed(1)}K`;
-    return `$${value.toFixed(0)}`;
+    // Ensure value is a valid number
+    const numValue = typeof value === 'number' && !isNaN(value) && isFinite(value) ? value : 0;
+    
+    if (numValue >= 1_000_000_000) return `$${(numValue / 1_000_000_000).toFixed(1)}B`;
+    if (numValue >= 1_000_000) return `$${(numValue / 1_000_000).toFixed(1)}M`;
+    if (numValue >= 1_000) return `$${(numValue / 1_000).toFixed(1)}K`;
+    return `$${Math.floor(numValue).toFixed(0)}`;
   };
 
   const formatPrice = (price: number): string => {
@@ -114,9 +167,8 @@ export default function ProphitLinePage() {
   const getPlatformColor = (platform: string): string => {
     switch (platform) {
       case 'Polymarket': return '#6366f1';
-      case 'Manifold': return '#10b981';
       case 'Kalshi': return '#f59e0b';
-      case 'PredictIt': return '#ec4899';
+      case 'PredictIt': return '#f97316';
       default: return '#64748b';
     }
   };
@@ -165,6 +217,13 @@ export default function ProphitLinePage() {
   };
 
   return (
+    <>
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     <div
       style={{
         minHeight: '100vh',
@@ -820,6 +879,9 @@ export default function ProphitLinePage() {
               {/* Refresh Button */}
               <button
                 onClick={fetchOpportunities}
+                disabled={isLoading}
+                title={isLoading ? 'Refreshing...' : 'Refresh opportunities'}
+                disabled={isLoading}
                 style={{
                   width: '36px',
                   height: '36px',
@@ -829,24 +891,33 @@ export default function ProphitLinePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'wait' : 'pointer',
                   transition: 'all 0.2s ease',
+                  opacity: isLoading ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#333';
-                  e.currentTarget.style.backgroundColor = '#1a1a1a';
+                  if (!isLoading) {
+                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.backgroundColor = '#1a1a1a';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.backgroundColor = '#131313';
+                  if (!isLoading) {
+                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.backgroundColor = '#131313';
+                  }
                 }}
+                title={isLoading ? 'Refreshing...' : 'Refresh opportunities'}
               >
                 <svg
                   width="18"
                   height="18"
                   fill="none"
-                  stroke="#94a3b8"
+                  stroke={isLoading ? '#8b5cf6' : '#94a3b8'}
                   viewBox="0 0 24 24"
+                  style={{
+                    animation: isLoading ? 'spin 1s linear infinite' : 'none',
+                  }}
                 >
                   <path
                     strokeLinecap="round"
@@ -910,6 +981,8 @@ export default function ProphitLinePage() {
               </select>
               <button
                 onClick={fetchOpportunities}
+                disabled={isLoading}
+                title={isLoading ? 'Refreshing...' : 'Refresh opportunities'}
                 style={{
                   width: '36px',
                   height: '36px',
@@ -919,24 +992,32 @@ export default function ProphitLinePage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  cursor: 'pointer',
+                  cursor: isLoading ? 'wait' : 'pointer',
                   transition: 'all 0.2s ease',
+                  opacity: isLoading ? 0.6 : 1,
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = '#333';
-                  e.currentTarget.style.backgroundColor = '#1a1a1a';
+                  if (!isLoading) {
+                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.backgroundColor = '#1a1a1a';
+                  }
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#222';
-                  e.currentTarget.style.backgroundColor = '#131313';
+                  if (!isLoading) {
+                    e.currentTarget.style.borderColor = '#222';
+                    e.currentTarget.style.backgroundColor = '#131313';
+                  }
                 }}
               >
                 <svg
                   width="18"
                   height="18"
                   fill="none"
-                  stroke="#94a3b8"
+                  stroke={isLoading ? '#8b5cf6' : '#94a3b8'}
                   viewBox="0 0 24 24"
+                  style={{
+                    animation: isLoading ? 'spin 1s linear infinite' : 'none',
+                  }}
                 >
                   <path
                     strokeLinecap="round"
@@ -1098,16 +1179,20 @@ export default function ProphitLinePage() {
         ) : (
           <div
             style={{
-              display: 'flex',
-              flexDirection: 'column',
+              display: isMobile ? 'flex' : 'grid',
+              flexDirection: isMobile ? 'column' : undefined,
+              gridTemplateColumns: isMobile ? undefined : 'repeat(2, 1fr)',
               gap: isMobile ? '16px' : '20px',
             }}
           >
             {sortedOpportunities.map((opp) => {
               const buyMarket = opp.bestBuy.market;
               const sellMarket = opp.bestSell.market;
-              const buyOutcome = buyMarket.outcomes?.[0] || { name: 'Yes', percentage: opp.bestBuy.price * 100 };
-              const sellOutcome = sellMarket.outcomes?.[0] || { name: 'Yes', percentage: opp.bestSell.price * 100 };
+              // Use the matched outcome index if available, otherwise use first outcome
+              const buyOutcomeIndex = opp.bestBuy.outcomeIndex !== undefined ? opp.bestBuy.outcomeIndex : 0;
+              const sellOutcomeIndex = opp.bestSell.outcomeIndex !== undefined ? opp.bestSell.outcomeIndex : 0;
+              const buyOutcome = buyMarket.outcomes?.[buyOutcomeIndex] || { name: 'Yes', percentage: opp.bestBuy.price * 100 };
+              const sellOutcome = sellMarket.outcomes?.[sellOutcomeIndex] || { name: 'Yes', percentage: opp.bestSell.price * 100 };
               
               return (
                 <div
@@ -1162,12 +1247,25 @@ export default function ProphitLinePage() {
                   >
                     {/* Buy Platform Card */}
                     <div
+                      onClick={() => {
+                        router.push(`/market/${encodeURIComponent(buyMarket.id)}`);
+                      }}
                       style={{
                         flex: 1,
                         backgroundColor: getPlatformColor(opp.bestBuy.platform) + '15',
                         border: `2px solid ${getPlatformColor(opp.bestBuy.platform)}40`,
                         borderRadius: '12px',
                         padding: isMobile ? '14px' : '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = getPlatformColor(opp.bestBuy.platform) + '25';
+                        e.currentTarget.style.borderColor = getPlatformColor(opp.bestBuy.platform) + '60';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = getPlatformColor(opp.bestBuy.platform) + '15';
+                        e.currentTarget.style.borderColor = getPlatformColor(opp.bestBuy.platform) + '40';
                       }}
                     >
                       <div
@@ -1225,12 +1323,25 @@ export default function ProphitLinePage() {
 
                     {/* Sell Platform Card */}
                     <div
+                      onClick={() => {
+                        router.push(`/market/${encodeURIComponent(sellMarket.id)}`);
+                      }}
                       style={{
                         flex: 1,
                         backgroundColor: getPlatformColor(opp.bestSell.platform) + '15',
                         border: `2px solid ${getPlatformColor(opp.bestSell.platform)}40`,
                         borderRadius: isMobile ? '10px' : '12px',
                         padding: isMobile ? '12px' : '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = getPlatformColor(opp.bestSell.platform) + '25';
+                        e.currentTarget.style.borderColor = getPlatformColor(opp.bestSell.platform) + '60';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = getPlatformColor(opp.bestSell.platform) + '15';
+                        e.currentTarget.style.borderColor = getPlatformColor(opp.bestSell.platform) + '40';
                       }}
                     >
                       <div
@@ -1376,5 +1487,6 @@ export default function ProphitLinePage() {
         )}
       </div>
     </div>
+    </>
   );
 }

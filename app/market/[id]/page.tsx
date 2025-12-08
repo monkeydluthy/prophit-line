@@ -1205,10 +1205,11 @@ export default function MarketPage() {
             <div className="flex flex-col gap-6 lg:gap-4 pb-0 lg:pb-10">
               {/* Trade Interface */}
               <div
-                className="bg-[#131313] border border-[#222] rounded-xl overflow-hidden"
+                className="bg-[#131313] border border-[#222] rounded-xl overflow-hidden relative"
                 style={{ padding: '20px' }}
               >
-                <div style={{ marginBottom: '16px' }}>
+                {/* Header - Always visible */}
+                <div style={{ marginBottom: '16px', position: 'relative', zIndex: 2 }}>
                   <h3
                     style={{
                       fontSize: '14px',
@@ -1237,215 +1238,257 @@ export default function MarketPage() {
                   )}
                 </div>
 
-                {/* Buy/Sell */}
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                  }}
-                >
+                {/* Trading Controls - Blurred section */}
+                <div style={{ position: 'relative', filter: 'blur(4px)', pointerEvents: 'none' }}>
+                  {/* Buy/Sell */}
                   <div
                     style={{
                       display: 'flex',
-                      backgroundColor: '#0a0a0a',
-                      borderRadius: '8px',
-                      padding: '2px',
-                      border: '1px solid #2a2a2a',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '16px',
                     }}
                   >
-                    <button
-                      onClick={() => setTradeTab('Buy')}
+                    <div
                       style={{
-                        padding: '4px 16px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        borderRadius: '6px',
-                        backgroundColor:
-                          tradeTab === 'Buy' ? '#1a2f23' : 'transparent',
-                        color: tradeTab === 'Buy' ? '#4ade80' : '#64748b',
-                        transition: 'all 0.2s',
+                        display: 'flex',
+                        backgroundColor: '#0a0a0a',
+                        borderRadius: '8px',
+                        padding: '2px',
+                        border: '1px solid #2a2a2a',
                       }}
                     >
-                      Buy
+                      <button
+                        onClick={() => setTradeTab('Buy')}
+                        style={{
+                          padding: '4px 16px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          borderRadius: '6px',
+                          backgroundColor:
+                            tradeTab === 'Buy' ? '#1a2f23' : 'transparent',
+                          color: tradeTab === 'Buy' ? '#4ade80' : '#64748b',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        Buy
+                      </button>
+                      <button
+                        onClick={() => setTradeTab('Sell')}
+                        style={{
+                          padding: '4px 16px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          borderRadius: '6px',
+                          backgroundColor:
+                            tradeTab === 'Sell' ? '#2f1a1a' : 'transparent',
+                          color: tradeTab === 'Sell' ? '#f87171' : '#64748b',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        Sell
+                      </button>
+                    </div>
+                    {/* Market/Limit tabs... */}
+                  </div>
+
+                  <div
+                    style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}
+                  >
+                    <button
+                      onClick={() => setSelectedOutcome('Yes')}
+                      style={{
+                        flex: 1,
+                        padding: '12px',
+                        borderRadius: '8px',
+                        backgroundColor:
+                          selectedOutcome === 'Yes' ? '#1a2f23' : '#111',
+                        border:
+                          selectedOutcome === 'Yes'
+                            ? '1px solid #22c55e'
+                            : '1px solid #222',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: '#22c55e',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        YES
+                      </span>
+                      <span
+                        style={{
+                          color: 'white',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {yesPrice}¢
+                      </span>
                     </button>
                     <button
-                      onClick={() => setTradeTab('Sell')}
+                      onClick={() => setSelectedOutcome('No')}
                       style={{
-                        padding: '4px 16px',
-                        fontSize: '12px',
-                        fontWeight: 'bold',
-                        borderRadius: '6px',
+                        flex: 1,
+                        padding: '12px',
+                        borderRadius: '8px',
                         backgroundColor:
-                          tradeTab === 'Sell' ? '#2f1a1a' : 'transparent',
-                        color: tradeTab === 'Sell' ? '#f87171' : '#64748b',
-                        transition: 'all 0.2s',
+                          selectedOutcome === 'No' ? '#2f1a1a' : '#111',
+                        border:
+                          selectedOutcome === 'No'
+                            ? '1px solid #ef4444'
+                            : '1px solid #222',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '4px',
                       }}
                     >
-                      Sell
+                      <span
+                        style={{
+                          color: '#ef4444',
+                          fontSize: '13px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        NO
+                      </span>
+                      <span
+                        style={{
+                          color: 'white',
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        {noPrice}¢
+                      </span>
                     </button>
                   </div>
-                  {/* Market/Limit tabs... */}
-                </div>
 
-                <div
-                  style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}
-                >
-                  <button
-                    onClick={() => setSelectedOutcome('Yes')}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '8px',
-                      backgroundColor:
-                        selectedOutcome === 'Yes' ? '#1a2f23' : '#111',
-                      border:
-                        selectedOutcome === 'Yes'
-                          ? '1px solid #22c55e'
-                          : '1px solid #222',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span
+                  <div style={{ position: 'relative', marginBottom: '16px' }}>
+                    <input
+                      type="text"
+                      placeholder="0"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
                       style={{
-                        color: '#22c55e',
-                        fontSize: '13px',
+                        width: '100%',
+                        backgroundColor: '#0a0a0a',
+                        border: '1px solid #2a2a2a',
+                        borderRadius: '10px',
+                        padding: '14px',
+                        fontSize: '18px',
                         fontWeight: 'bold',
-                      }}
-                    >
-                      YES
-                    </span>
-                    <span
-                      style={{
                         color: 'white',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
+                        outline: 'none',
                       }}
-                    >
-                      {yesPrice}¢
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => setSelectedOutcome('No')}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '8px',
-                      backgroundColor:
-                        selectedOutcome === 'No' ? '#2f1a1a' : '#111',
-                      border:
-                        selectedOutcome === 'No'
-                          ? '1px solid #ef4444'
-                          : '1px solid #222',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span
+                    />
+                    <div
                       style={{
-                        color: '#ef4444',
-                        fontSize: '13px',
+                        position: 'absolute',
+                        right: '14px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        color: '#64748b',
                         fontWeight: 'bold',
+                        fontSize: '14px',
                       }}
                     >
-                      NO
-                    </span>
-                    <span
-                      style={{
-                        color: 'white',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                      }}
-                    >
-                      {noPrice}¢
-                    </span>
-                  </button>
-                </div>
+                      USDC
+                    </div>
+                  </div>
 
-                <div style={{ position: 'relative', marginBottom: '16px' }}>
-                  <input
-                    type="text"
-                    placeholder="0"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                  <button
                     style={{
                       width: '100%',
-                      backgroundColor: '#0a0a0a',
-                      border: '1px solid #2a2a2a',
-                      borderRadius: '10px',
+                      backgroundColor: '#22c55e',
+                      color: 'black',
                       padding: '14px',
-                      fontSize: '18px',
+                      borderRadius: '10px',
+                      fontSize: '15px',
                       fontWeight: 'bold',
-                      color: 'white',
-                      outline: 'none',
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '14px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color: '#64748b',
-                      fontWeight: 'bold',
-                      fontSize: '14px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      marginBottom: '16px',
                     }}
                   >
-                    USDC
-                  </div>
+                    Place Market Order
+                  </button>
                 </div>
 
-                <button
-                  style={{
-                    width: '100%',
-                    backgroundColor: '#22c55e',
-                    color: 'black',
-                    padding: '14px',
-                    borderRadius: '10px',
-                    fontSize: '15px',
-                    fontWeight: 'bold',
-                    border: 'none',
-                    cursor: 'pointer',
-                    marginBottom: '16px',
-                  }}
-                >
-                  Place Market Order
-                </button>
-
+                {/* Overlay with message and button */}
                 <div
                   style={{
-                    textAlign: 'center',
-                    paddingBottom: '20px',
-                    borderBottom: '1px solid #1f1f1f',
-                    marginBottom: '20px',
+                    position: 'absolute',
+                    top: selectedMarket ? '76px' : '56px', // Start after header (adjust based on whether market name is shown)
+                    left: '20px',
+                    right: '20px',
+                    bottom: '20px',
+                    backgroundColor: 'rgba(19, 19, 19, 0.9)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '24px',
+                    padding: '40px 20px',
+                    zIndex: 10,
+                    border: '1px solid rgba(34, 34, 34, 0.5)',
                   }}
                 >
+                  <p
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      color: '#94a3b8',
+                      textAlign: 'center',
+                      margin: 0,
+                      lineHeight: '1.5',
+                    }}
+                  >
+                    Full trading capability coming soon
+                  </p>
                   <a
                     href={market.link}
                     target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      fontSize: '11px',
-                      color: '#64748b',
+                      backgroundColor: '#22c55e',
+                      color: 'black',
+                      padding: '12px 24px',
+                      borderRadius: '10px',
+                      fontSize: '14px',
+                      fontWeight: 'bold',
+                      textDecoration: 'none',
                       display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      textDecoration: 'none',
+                      gap: '8px',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#16a34a';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#22c55e';
                     }}
                   >
                     Trade on {market.platform}
                     <svg
-                      width="10"
-                      height="10"
+                      width="14"
+                      height="14"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
-                      strokeWidth="2"
+                      strokeWidth="2.5"
                     >
                       <path
                         d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"

@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'ProphitLine - Prediction Market Aggregator',
   description:
-    'Find the best odds across multiple prediction markets. Compare prices from Kalshi, Polymarket, Manifold Markets, and PredictIt.',
+    'Find the best odds across multiple prediction markets. Compare prices from Kalshi, Polymarket, and PredictIt.',
 };
 
 export default function RootLayout({

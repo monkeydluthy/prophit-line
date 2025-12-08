@@ -20,6 +20,26 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+### Anthropic API Key (Optional)
+
+To enable LLM-based market matching verification for improved accuracy:
+
+1. **Get your API key:**
+   - Go to [Anthropic Console](https://console.anthropic.com/)
+   - Sign up or log in
+   - Navigate to "API Keys" section
+   - Create a new API key
+   - Copy the key (starts with `sk-ant-...`)
+
+2. **Add to your environment:**
+   - Create a `.env.local` file in the root directory
+   - Add: `ANTHROPIC_API_KEY=your_api_key_here`
+   - Restart your dev server
+
+**Note:** The app works without this key using rule-based matching only. LLM verification is only used for edge cases (scores 60-85%) to improve accuracy and reduce false positives.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

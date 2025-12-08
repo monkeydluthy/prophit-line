@@ -35,3 +35,7 @@
 - Wait for multiple snapshots to accumulate (you need history points)
 - Or check if the market actually has multiple outcomes in the API response
 
+
+
+
+

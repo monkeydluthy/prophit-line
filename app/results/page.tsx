@@ -192,7 +192,7 @@ function ResultsContent() {
             </p>
             <p className="text-slate-400 text-sm max-w-lg">
               Try searching for another topic or broaden your terms—we scan
-              Polymarket, Kalshi, Manifold, and PredictIt for you.
+              Polymarket, Kalshi, and PredictIt for you.
             </p>
             <Link
               href="/"

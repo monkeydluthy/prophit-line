@@ -13,3 +13,5 @@ CREATE INDEX IF NOT EXISTS market_snapshots_market_outcome_time_idx
 CREATE INDEX IF NOT EXISTS market_snapshots_outcome_name_idx
   ON public.market_snapshots (outcome_name, recorded_at DESC);
 
+
+

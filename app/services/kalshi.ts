@@ -51,37 +51,102 @@ function getHeaders(method: string, path: string) {
 export async function searchKalshi(query: string): Promise<MarketResult[]> {
   const events = await fetchKalshiEvents();
 
-  const lowerQuery = query.toLowerCase();
+  const lowerQuery = query.toLowerCase().trim();
 
-  let filtered = events.filter(
-    (e: any) =>
-      (e.title && e.title.toLowerCase().includes(lowerQuery)) ||
-      (e.ticker && e.ticker.toLowerCase().includes(lowerQuery))
-  );
+  // Extract meaningful terms (remove stop words)
+  const stopWords = new Set([
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'in',
+    'on',
+    'at',
+    'to',
+    'for',
+    'of',
+    'with',
+    'by',
+    'will',
+    'be',
+    'is',
+    'are',
+    'was',
+    'were',
+  ]);
+  const queryTerms = lowerQuery
+    .split(/\s+/)
+    .filter((term) => term.length > 1 && !stopWords.has(term))
+    .map((term) => term.replace(/[^a-z0-9]/g, ''))
+    .filter((term) => term.length > 0);
+
+  if (queryTerms.length === 0) return [];
+
+  // Use strict word boundary matching for short terms
+  const filtered = events.filter((e: any) => {
+    const title = (e.title || '').toLowerCase();
+    const ticker = (e.ticker || '').toLowerCase();
+    const searchText = `${title} ${ticker}`;
+
+    // All terms must match
+    return queryTerms.every((term) => {
+      const isShortTerm = term.length <= 3;
+      if (isShortTerm) {
+        // Short terms must match as whole words
+        const wordBoundaryRegex = new RegExp(
+          `\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`,
+          'i'
+        );
+        return wordBoundaryRegex.test(searchText);
+      } else {
+        // Longer terms can match as substring
+        return searchText.includes(term);
+      }
+    });
+  });
 
   return filtered.slice(0, 20).map((event: any) => mapKalshiEvent(event));
 }
 
 export async function getKalshiTopEvents(
-  limit: number = 60
+  limit: number = 200
 ): Promise<MarketResult[]> {
-  const events = await fetchKalshiEvents(limit);
-  return events.slice(0, limit).map((event: any) => mapKalshiEvent(event));
+  // fetchKalshiEvents supports up to 500, but we'll cap at 500 to be safe
+  const safeLimit = Math.min(limit, 500);
+  const events = await fetchKalshiEvents(safeLimit);
+  const mapped = events
+    .slice(0, safeLimit)
+    .map((event: any) => mapKalshiEvent(event));
+  console.log(
+    `[Kalshi] Fetched ${mapped.length} top events (requested ${limit}, capped at ${safeLimit})`
+  );
+  return mapped;
 }
 
 export async function getKalshiTrendingEvents(
   limit: number = 120
 ): Promise<MarketResult[]> {
+  // For large limits (500+), use getKalshiTopEvents which is more efficient
+  // The trending endpoint is paginated and slower for large requests
+  if (limit >= 300) {
+    console.log(`[Kalshi] Using top events for large limit (${limit})`);
+    return await getKalshiTopEvents(limit);
+  }
+
   try {
-    const cappedLimit = Math.min(limit, 50);
+    // For smaller limits, try trending endpoint
+    // Kalshi API supports up to 100 per page, paginate if needed
+    const pageSize = Math.min(limit, 100);
     const response = await fetch(
-      `${PUBLIC_API}/search/series?order_by=trending&page_size=${cappedLimit}&status=open&with_milestones=true`,
+      `${PUBLIC_API}/search/series?order_by=trending&page_size=${pageSize}&status=open&with_milestones=true`,
       { next: { revalidate: 30 } }
     );
 
     if (!response.ok) {
       console.error('Kalshi trending API error:', response.status);
-      return [];
+      return await getKalshiTopEvents(limit);
     }
 
     const data = await response.json();
@@ -103,12 +168,16 @@ export async function getKalshiTrendingEvents(
       .map((event: any) => mapKalshiEvent(event));
 
     if (mapped.length > 0) {
+      console.log(
+        `[Kalshi] Fetched ${mapped.length} trending events (requested ${pageSize})`
+      );
       return mapped;
     }
   } catch (error) {
     console.error('Kalshi trending fetch error:', error);
   }
 
+  // Fallback to top events (supports up to 500)
   try {
     return await getKalshiTopEvents(limit);
   } catch (fallbackError) {
@@ -342,10 +411,76 @@ function mapKalshiEvent(event: any): MarketResult {
   if (outcomes.length > 0) outcomes[0].color = 'green';
   if (outcomes.length > 1) outcomes[1].color = 'red';
 
+  // Use question field if available (more accurate), otherwise title
+  // The question field contains the actual market question, not concatenated outcomes
+  // Filter out "Combo" and other invalid titles
+  function getKalshiTitle(event: any): string {
+    // 1. Try market subtitle (most specific for single markets)
+    if (markets.length === 1 && markets[0]?.subtitle) {
+      const subtitle = markets[0].subtitle;
+      if (subtitle && subtitle !== 'Combo' && subtitle.length > 10) {
+        return subtitle;
+      }
+    }
+
+    // 2. Try event question (from event API)
+    if (
+      event.question &&
+      event.question !== 'Combo' &&
+      event.question.length > 10
+    ) {
+      return event.question;
+    }
+
+    // 3. Try event title + subtitle
+    if (event.title && event.sub_title) {
+      const combined = `${event.title}: ${event.sub_title}`;
+      if (combined !== 'Combo' && combined.length > 10) {
+        return combined;
+      }
+    }
+
+    // 4. Just event title
+    if (event.title && event.title !== 'Combo' && event.title.length > 10) {
+      return event.title;
+    }
+
+    // 5. Try sub_title alone
+    if (
+      event.sub_title &&
+      event.sub_title !== 'Combo' &&
+      event.sub_title.length > 10
+    ) {
+      return event.sub_title;
+    }
+
+    // 6. Try series_title from first market
+    if (
+      markets[0]?.series_title &&
+      markets[0].series_title !== 'Combo' &&
+      markets[0].series_title.length > 10
+    ) {
+      return markets[0].series_title;
+    }
+
+    // 7. Try event_title from first market
+    if (
+      markets[0]?.event_title &&
+      markets[0].event_title !== 'Combo' &&
+      markets[0].event_title.length > 10
+    ) {
+      return markets[0].event_title;
+    }
+
+    return `Kalshi Market ${eventTicker}`;
+  }
+
+  const marketTitle = getKalshiTitle(event);
+
   return {
     id: `kalshi:${eventTicker}`,
     platform: 'Kalshi',
-    title: event.title,
+    title: marketTitle,
     icon: '🟢',
     outcomes: outcomes.slice(0, 5),
     volume: formatCurrency(totalVolume),
@@ -374,7 +509,72 @@ function formatNumber(value: number): string {
   return value.toString();
 }
 
-async function fetchKalshiEvents(limit: number = 120): Promise<any[]> {
+/**
+ * Fetch series data from Kalshi to get the actual questions (not outcome names)
+ */
+async function fetchKalshiSeries(
+  seriesTickers: string[]
+): Promise<Map<string, any>> {
+  const seriesMap = new Map<string, any>();
+  const chunkSize = 20; // Kalshi API limit
+
+  for (let i = 0; i < seriesTickers.length; i += chunkSize) {
+    const chunk = seriesTickers.slice(i, i + chunkSize);
+    try {
+      const response = await fetch(
+        `${PUBLIC_API}/series/?series_tickers=${chunk.join(',')}&page_size=${
+          chunk.length
+        }`,
+        { next: { revalidate: 60 } }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        // Debug: log first response to see structure
+        if (i === 0 && data) {
+          console.log('[Kalshi Debug] Series API response:', {
+            hasSeries: Array.isArray(data?.series),
+            seriesCount: Array.isArray(data?.series) ? data.series.length : 0,
+            firstSeriesKeys:
+              Array.isArray(data?.series) && data.series[0]
+                ? Object.keys(data.series[0])
+                : [],
+            firstSeriesSample:
+              Array.isArray(data?.series) && data.series[0]
+                ? {
+                    series_ticker: data.series[0].series_ticker,
+                    title: data.series[0].title,
+                    question: data.series[0].question,
+                  }
+                : null,
+          });
+        }
+
+        const series = Array.isArray(data?.series) ? data.series : [];
+        for (const s of series) {
+          if (s.series_ticker) {
+            seriesMap.set(s.series_ticker, s);
+          }
+        }
+      } else {
+        console.warn(
+          `[Kalshi] Series API error for chunk ${i / chunkSize + 1}: ${
+            response.status
+          }`
+        );
+      }
+    } catch (error) {
+      console.warn(
+        `[Kalshi] Series API fetch error for chunk ${i / chunkSize + 1}:`,
+        error
+      );
+    }
+  }
+
+  return seriesMap;
+}
+
+async function fetchKalshiEvents(limit: number = 500): Promise<any[]> {
   const endpoint = '/markets';
   const queryParams = `?limit=${limit}`;
   const fullPath = API_PREFIX + endpoint + queryParams;
@@ -401,15 +601,46 @@ async function fetchKalshiEvents(limit: number = 120): Promise<any[]> {
     const data = await response.json();
     const markets = data.markets || [];
 
+    // Debug: Log first few markets to see structure
+    if (markets.length > 0) {
+      console.log('[Kalshi Debug] Sample market from /markets endpoint:');
+      console.log('  Fields:', Object.keys(markets[0]));
+      console.log(
+        '  Sample:',
+        JSON.stringify(
+          {
+            event_ticker: markets[0].event_ticker,
+            title: markets[0].title,
+            subtitle: markets[0].subtitle,
+            event_title: markets[0].event_title,
+            series_title: markets[0].series_title,
+            question: markets[0].question,
+            sub_title: markets[0].sub_title,
+            series_ticker: markets[0].series_ticker,
+          },
+          null,
+          2
+        )
+      );
+    }
+
+    // Step 1: Group markets by event_ticker and collect series_tickers
     const eventsMap = new Map<string, any>();
+    const uniqueSeriesTickers = new Set<string>();
 
     for (const m of markets) {
       if (!m.event_ticker) continue;
 
+      if (m.series_ticker) {
+        uniqueSeriesTickers.add(m.series_ticker);
+      }
+
       if (!eventsMap.has(m.event_ticker)) {
         eventsMap.set(m.event_ticker, {
           ticker: m.event_ticker,
-          title: m.event_title || m.title,
+          series_ticker: m.series_ticker,
+          title: null, // Will be set from series data
+          question: null,
           markets: [],
           volume: 0,
         });
@@ -419,8 +650,134 @@ async function fetchKalshiEvents(limit: number = 120): Promise<any[]> {
       event.volume += m.volume || 0;
     }
 
+    // Step 2: Fetch event data using event tickers (this has the actual questions!)
+    const uniqueEventTickers = Array.from(eventsMap.keys());
+    console.log(
+      `[Kalshi] Fetching event data for ${uniqueEventTickers.length} unique events to get questions...`
+    );
+    const eventDataMap = await fetchKalshiEventsByTickers(uniqueEventTickers);
+    const eventDataByTicker = new Map(
+      eventDataMap.map((evt: any) => [evt.ticker || evt.event_ticker, evt])
+    );
+    console.log(
+      `[Kalshi] Fetched ${eventDataByTicker.size} events with question data`
+    );
+
+    // Step 3: Also try series data as backup
+    console.log(
+      `[Kalshi] Fetching series data for ${uniqueSeriesTickers.size} unique series as backup...`
+    );
+    const seriesMap = await fetchKalshiSeries(Array.from(uniqueSeriesTickers));
+    console.log(`[Kalshi] Fetched ${seriesMap.size} series with question data`);
+
+    // Step 4: Update events with titles/questions from event data (best source)
+    let eventDataFoundCount = 0;
+    let seriesFoundCount = 0;
+    let fallbackCount = 0;
+
+    for (const [eventTicker, event] of eventsMap.entries()) {
+      // First priority: Use event data (most reliable - has actual questions)
+      if (eventDataByTicker.has(eventTicker)) {
+        const eventData = eventDataByTicker.get(eventTicker);
+        event.title =
+          eventData.title || eventData.question || eventData.event_title;
+        event.question =
+          eventData.title || eventData.question || eventData.event_title;
+        event.sub_title = eventData.sub_title || event.sub_title;
+        if (event.title) eventDataFoundCount++;
+      }
+
+      // Second priority: Try series data if event data didn't work
+      if (
+        !event.title &&
+        event.series_ticker &&
+        seriesMap.has(event.series_ticker)
+      ) {
+        const series = seriesMap.get(event.series_ticker);
+        event.title = series.title || series.question;
+        event.question = series.title || series.question;
+        event.sub_title = series.sub_title || event.sub_title;
+        if (event.title) seriesFoundCount++;
+      }
+
+      // Fallback: if no series data, try multiple sources from market data
+      if (!event.title && event.markets.length > 0) {
+        const firstMarket = event.markets[0];
+
+        // Try multiple fields in order of preference
+        const possibleTitles = [
+          firstMarket.series_title,
+          firstMarket.event_title,
+          firstMarket.title, // Sometimes title is the question
+          // For multi-market events, try to construct from subtitles
+          event.markets.length === 1 ? firstMarket.subtitle : null,
+        ].filter(Boolean);
+
+        // Find first title that doesn't look like concatenated outcomes
+        for (const marketTitle of possibleTitles) {
+          if (
+            marketTitle &&
+            typeof marketTitle === 'string' &&
+            marketTitle.length > 10 && // Must be meaningful length
+            !marketTitle.includes(',yes ') &&
+            !marketTitle.includes(',no ') &&
+            !marketTitle.match(/^[A-Z0-9-]+$/) // Not just a ticker/code
+          ) {
+            event.title = marketTitle;
+            event.question = marketTitle;
+            fallbackCount++;
+            break;
+          }
+        }
+      }
+
+      // Final fallback: try to construct a title from market subtitles
+      if (!event.title && event.markets.length > 0) {
+        // For single market events, use the subtitle as the question
+        if (event.markets.length === 1 && event.markets[0].subtitle) {
+          const subtitle = event.markets[0].subtitle;
+          // Only use if it looks like a question, not an outcome
+          if (
+            subtitle.length > 10 &&
+            !subtitle.includes(',') &&
+            (subtitle.includes('?') ||
+              subtitle.includes('will') ||
+              subtitle.includes('win'))
+          ) {
+            event.title = subtitle;
+            event.question = subtitle;
+            fallbackCount++;
+          }
+        }
+      }
+
+      // Absolute final fallback: use a generic title
+      if (!event.title) {
+        event.title = `Kalshi Market ${eventTicker}`;
+        event.question = event.title;
+      }
+    }
+
+    console.log(
+      `[Kalshi] Title extraction: ${eventDataFoundCount} from event API, ${seriesFoundCount} from series API, ${fallbackCount} from market data, ${
+        eventsMap.size - eventDataFoundCount - seriesFoundCount - fallbackCount
+      } fallbacks`
+    );
+
     const events = Array.from(eventsMap.values());
     events.sort((a: any, b: any) => b.volume - a.volume);
+    console.log(
+      `[Kalshi] fetchKalshiEvents returned ${events.length} unique events (requested limit: ${limit})`
+    );
+
+    // Log sample of final titles to verify they're correct
+    if (events.length > 0) {
+      console.log('[Kalshi Debug] Sample final event titles (first 5):');
+      events.slice(0, 5).forEach((e, idx) => {
+        console.log(`  ${idx + 1}. "${e.title?.substring(0, 70)}"`);
+      });
+    }
+
     return events;
   } catch (error) {
     console.error('Kalshi fetch events error:', error);
@@ -519,6 +876,28 @@ async function fetchKalshiEventsByTickers(
 
       const data = await response.json();
       if (Array.isArray(data?.events)) {
+        // Debug: Log first event structure from /events endpoint
+        if (events.length === 0 && data.events.length > 0) {
+          console.log('[Kalshi Debug] Sample event from /events endpoint:');
+          console.log('  Fields:', Object.keys(data.events[0]));
+          console.log(
+            '  Sample:',
+            JSON.stringify(
+              {
+                event_ticker: data.events[0].event_ticker,
+                title: data.events[0].title,
+                subtitle: data.events[0].subtitle,
+                event_title: data.events[0].event_title,
+                series_title: data.events[0].series_title,
+                question: data.events[0].question,
+                sub_title: data.events[0].sub_title,
+                series_ticker: data.events[0].series_ticker,
+              },
+              null,
+              2
+            )
+          );
+        }
         events.push(...data.events);
       }
     } catch (error) {

@@ -16,3 +16,7 @@ create index if not exists market_snapshots_market_time_idx
 create index if not exists market_snapshots_platform_idx
   on public.market_snapshots (platform, recorded_at desc);
 
+
+
+
+

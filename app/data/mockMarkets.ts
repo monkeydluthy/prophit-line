@@ -107,113 +107,6 @@ export const mockMarkets = [
     date: 'Dec 31',
   },
 
-  // --- MANIFOLD (Purple) ---
-  {
-    id: 201,
-    platform: 'Manifold',
-    title: 'Will SpaceX Starship reach orbit in 2025?',
-    icon: '🚀',
-    outcomes: [
-      { name: 'Yes', percentage: 92, color: 'green' },
-      { name: 'No', percentage: 8, color: 'red' },
-    ],
-    moreOptions: 0,
-    volume: 'M$ 450K',
-    date: 'Dec 31',
-  },
-  {
-    id: 202,
-    platform: 'Manifold',
-    title: 'Will AGI be achieved by 2027?',
-    icon: '🤖',
-    outcomes: [
-      { name: 'Yes', percentage: 35, color: 'green' },
-      { name: 'No', percentage: 65, color: 'red' },
-    ],
-    moreOptions: 0,
-    volume: 'M$ 890K',
-    date: '2027',
-  },
-  {
-    id: 203,
-    platform: 'Manifold',
-    title: 'Will humans land on Mars by 2030?',
-    icon: '🪐',
-    outcomes: [
-      { name: 'Yes', percentage: 12, color: 'green' },
-      { name: 'No', percentage: 88, color: 'red' },
-    ],
-    moreOptions: 0,
-    volume: 'M$ 1.2M',
-    date: '2030',
-  },
-  {
-    id: 204,
-    platform: 'Manifold',
-    title: 'Will fusion power satisfy 1% of world energy?',
-    icon: '⚛️',
-    outcomes: [
-      { name: 'Before 2035', percentage: 5, color: 'green' },
-      { name: 'After 2035', percentage: 95, color: 'red' },
-    ],
-    moreOptions: 0,
-    volume: 'M$ 200K',
-    date: '2035',
-  },
-
-  // --- PREDICTIT (Red) ---
-  {
-    id: 301,
-    platform: 'PredictIt',
-    title: 'Who will win the 2026 World Cup?',
-    icon: '⚽',
-    outcomes: [
-      { name: 'France', percentage: 18, color: 'green' },
-      { name: 'Brazil', percentage: 15, color: 'blue' },
-    ],
-    moreOptions: 30,
-    volume: '320K Shares',
-    date: 'Jul 2026',
-  },
-  {
-    id: 302,
-    platform: 'PredictIt',
-    title: 'UK Prime Minister after next election?',
-    icon: '🇬🇧',
-    outcomes: [
-      { name: 'Starmer', percentage: 85, color: 'green' },
-      { name: 'Sunak', percentage: 5, color: 'red' },
-    ],
-    moreOptions: 5,
-    volume: '150K Shares',
-    date: 'Jan 2025',
-  },
-  {
-    id: 303,
-    platform: 'PredictIt',
-    title: 'Who will be the next Pope?',
-    icon: '⛪',
-    outcomes: [
-      { name: 'Tagle', percentage: 12, color: 'green' },
-      { name: 'Erdő', percentage: 8, color: 'blue' },
-    ],
-    moreOptions: 25,
-    volume: '85K Shares',
-    date: '???',
-  },
-  {
-    id: 304,
-    platform: 'PredictIt',
-    title: 'Will California secede?',
-    icon: '🐻',
-    outcomes: [
-      { name: 'Yes', percentage: 3, color: 'green' },
-      { name: 'No', percentage: 97, color: 'red' },
-    ],
-    moreOptions: 0,
-    volume: '500K Shares',
-    date: 'Dec 31',
-  },
 ];
 
 export const getPlatformStyles = (platform: string) => {
@@ -226,23 +119,22 @@ export const getPlatformStyles = (platform: string) => {
         iconBg: 'bg-green-500',
         shadow: 'shadow-[0_0_6px_rgba(34,197,94,0.5)]',
       };
-    case 'manifold':
+    case 'polymarket':
       return {
-        bg: 'bg-[#2d1b36]',
-        border: 'border-purple-900/30',
-        text: 'text-purple-400',
-        iconBg: 'bg-purple-500',
-        shadow: 'shadow-[0_0_6px_rgba(168,85,247,0.5)]',
+        bg: 'bg-[#1d283a]',
+        border: 'border-blue-900/30',
+        text: 'text-blue-400',
+        iconBg: 'bg-blue-500',
+        shadow: 'shadow-[0_0_6px_rgba(59,130,246,0.5)]',
       };
     case 'predictit':
       return {
-        bg: 'bg-[#2f1a1a]',
-        border: 'border-red-900/30',
-        text: 'text-red-400',
-        iconBg: 'bg-red-500',
-        shadow: 'shadow-[0_0_6px_rgba(239,68,68,0.5)]',
+        bg: 'bg-[#3a2f1f]',
+        border: 'border-orange-900/30',
+        text: 'text-orange-400',
+        iconBg: 'bg-orange-500',
+        shadow: 'shadow-[0_0_6px_rgba(249,115,22,0.5)]',
       };
-    case 'polymarket':
     default:
       return {
         bg: 'bg-[#1d283a]',

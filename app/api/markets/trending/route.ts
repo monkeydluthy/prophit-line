@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFrontPageMarkets } from '@/app/services/marketService';
 import { MarketResult } from '@/types';
 
-const PLATFORM_PRIORITY = ['Polymarket', 'Kalshi', 'PredictIt', 'Manifold'];
+const PLATFORM_PRIORITY = ['Polymarket', 'Kalshi', 'PredictIt'];
 
 function interleaveTopPlatforms(
   markets: MarketResult[],

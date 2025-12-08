@@ -301,8 +301,8 @@ export default function Home() {
             <p className="text-lg mb-2">No markets found</p>
             <p className="text-sm text-slate-600">
               Try adjusting your filters
-            </p>
-          </div>
+          </p>
+        </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {filteredMarkets.map((market, index) => (
@@ -317,7 +317,7 @@ export default function Home() {
             ))}
           </div>
         )}
-      </div>
+        </div>
     </div>
   );
 }

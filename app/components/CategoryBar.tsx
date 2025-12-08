@@ -16,8 +16,7 @@ const categories = [
 const platforms = [
   { name: 'Polymarket', color: 'bg-blue-500' },
   { name: 'Kalshi', color: 'bg-green-500' },
-  { name: 'Manifold', color: 'bg-purple-500' },
-  { name: 'PredictIt', color: 'bg-red-500' },
+  { name: 'PredictIt', color: 'bg-orange-500' },
 ];
 
 const volumeOptions = [

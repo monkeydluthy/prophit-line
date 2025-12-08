@@ -60,7 +60,7 @@ export default function AboutPage() {
                 Market Search
               </h3>
               <p className="text-slate-400 leading-relaxed text-base">
-                We search across multiple prediction market platforms including Kalshi, Polymarket, Manifold Markets, and PredictIt.
+                We search across multiple prediction market platforms including Kalshi, Polymarket, and PredictIt.
               </p>
             </div>
 
@@ -103,18 +103,10 @@ export default function AboutPage() {
             </div>
             <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
               <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
-                Manifold Markets
-              </h3>
-              <p className="text-slate-400 leading-relaxed text-base">
-                Community-driven platform with unique market creation and trading features.
-              </p>
-            </div>
-            <div className="border rounded-2xl hover:border-slate-600 transition-all duration-300" style={{ padding: '32px', backgroundColor: '#1a1a1a', borderColor: '#2a2a2a' }}>
-              <h3 className="font-bold text-white text-2xl font-heading" style={{ marginBottom: '12px' }}>
                 PredictIt
               </h3>
               <p className="text-slate-400 leading-relaxed text-base">
-                Popular platform focused on political predictions and current events.
+                Regulated US political prediction market with focus on elections and political events.
               </p>
             </div>
           </div>

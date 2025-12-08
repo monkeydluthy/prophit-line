@@ -14,7 +14,7 @@ export interface MarketOutcome {
 
 export interface MarketResult {
   id: string; // Unique ID (or slug)
-  platform: 'Polymarket' | 'Manifold' | 'Kalshi' | 'PredictIt';
+  platform: 'Polymarket' | 'Kalshi' | 'PredictIt';
   title: string;
   icon?: string;
   outcomes: MarketOutcome[];

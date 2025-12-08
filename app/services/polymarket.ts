@@ -406,7 +406,7 @@ function filterEventsByQuery(events: any[], query: string): any[] {
   const activeTokens =
     meaningfulTokens.length > 0 ? meaningfulTokens : tokens;
 
-  if (activeTokens.length === 0) return events;
+  if (activeTokens.length === 0) return []; // Return empty array instead of all events
 
   const scored = events
     .map((event) => {
@@ -422,23 +422,58 @@ function filterEventsByQuery(events: any[], query: string): any[] {
       ];
 
       let matches = 0;
+      let allTermsMatch = true;
+      
       activeTokens.forEach((token) => {
-        if (fields.some((field) => field.includes(token))) {
+        const isShortTerm = token.length <= 3;
+        let termMatched = false;
+        
+        fields.forEach((field) => {
+          if (isShortTerm) {
+            // Short terms (like "nfl", "agi") MUST match as whole words only
+            const wordBoundaryRegex = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            if (wordBoundaryRegex.test(field)) {
+              termMatched = true;
+            }
+          } else {
+            // Longer terms can match as substring, but prefer whole word
+            const wordBoundaryRegex = new RegExp(`\\b${token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+            if (wordBoundaryRegex.test(field) || field.includes(token)) {
+              termMatched = true;
+            }
+          }
+        });
+        
+        if (termMatched) {
           matches += 1;
+        } else {
+          allTermsMatch = false;
         }
       });
 
       return {
         event,
         matches,
+        allTermsMatch,
       };
     })
-    .filter((entry) => entry.matches > 0);
+    .filter((entry) => {
+      // STRICT: Only return if ALL terms matched (or at least 70% for longer queries)
+      const requiredMatches = activeTokens.length <= 2 
+        ? activeTokens.length 
+        : Math.ceil(activeTokens.length * 0.7);
+      return entry.matches >= requiredMatches;
+    });
 
-  if (scored.length === 0) return events;
+  // Return empty array if no matches found (don't return all events)
+  if (scored.length === 0) return [];
 
   return scored
     .sort((a, b) => {
+      // Prioritize events where all terms matched
+      if (a.allTermsMatch !== b.allTermsMatch) {
+        return b.allTermsMatch ? 1 : -1;
+      }
       if (b.matches !== a.matches) return b.matches - a.matches;
       const volA = a.event.volume || 0;
       const volB = b.event.volume || 0;

@@ -32,22 +32,32 @@ export async function getManifoldTopMarkets(
   limit: number = 60
 ): Promise<MarketResult[]> {
   try {
+    const cappedLimit = Math.min(limit, 500);
+    console.log(`[Manifold] Fetching top ${cappedLimit} markets...`);
+    
     const response = await fetch(
-      `${API_URL}/markets?limit=${limit}&sort=24hr_vol`
+      `${API_URL}/markets?limit=${cappedLimit}&sort=24hr_vol`
     );
 
+    console.log(`[Manifold] Response status: ${response.status}`);
+
     if (!response.ok) {
-      console.error('Manifold top API error:', response.statusText);
+      console.error(`[Manifold] Top API error: ${response.status} ${response.statusText}`);
       return [];
     }
 
     const data = await response.json();
 
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) {
+      console.error(`[Manifold] Expected array, got: ${typeof data}`);
+      return [];
+    }
+
+    console.log(`[Manifold] Fetched ${data.length} top markets`);
 
     return data.map((market: any) => mapManifoldMarket(market));
   } catch (error) {
-    console.error('Manifold top error:', error);
+    console.error('[Manifold] Top error:', error);
     return [];
   }
 }
@@ -56,28 +66,43 @@ export async function getManifoldTrendingMarkets(
   limit: number = 200
 ): Promise<MarketResult[]> {
   try {
-    const cappedLimit = Math.min(limit, 200);
+    // Manifold API supports up to 500, but we'll be conservative
+    const cappedLimit = Math.min(limit, 500);
+    console.log(`[Manifold] Fetching ${cappedLimit} markets from API...`);
+    
     const response = await fetch(`${API_URL}/markets?limit=${cappedLimit}`, {
       next: { revalidate: 60 },
     });
 
+    console.log(`[Manifold] Response status: ${response.status}`);
+
     if (!response.ok) {
-      console.error('Manifold trending API error:', response.statusText);
+      console.error(`[Manifold] API error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`[Manifold] Error details: ${errorText.substring(0, 200)}`);
       return [];
     }
 
     const data = await response.json();
 
-    if (!Array.isArray(data)) return [];
+    if (!Array.isArray(data)) {
+      console.error(`[Manifold] Expected array, got: ${typeof data}`);
+      return [];
+    }
+
+    console.log(`[Manifold] Fetched ${data.length} markets from API`);
 
     data.sort(
       (a: any, b: any) =>
         (b.volume24Hours || b.volume || 0) - (a.volume24Hours || a.volume || 0)
     );
 
-    return data.map((market: any) => mapManifoldMarket(market));
+    const mapped = data.map((market: any) => mapManifoldMarket(market));
+    console.log(`[Manifold] Mapped ${mapped.length} markets successfully`);
+    
+    return mapped;
   } catch (error) {
-    console.error('Manifold trending fetch error:', error);
+    console.error('[Manifold] Trending fetch error:', error);
     return [];
   }
 }

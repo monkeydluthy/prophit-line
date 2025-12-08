@@ -23,22 +23,44 @@ export async function searchPredictIt(query: string): Promise<MarketResult[]> {
     const data = await response.json();
     const markets = data.markets || [];
 
-    const lowerQuery = query.toLowerCase();
-
-    // If query is generic "trending" (used by homepage), return top markets by simple slice?
-    // Or strict filter.
-    // Let's stick to filter, but if query is "trending", we return top.
-
-    let filtered = markets;
-    if (query !== 'trending') {
-      filtered = markets.filter(
-        (m: any) =>
-          m.name.toLowerCase().includes(lowerQuery) ||
-          m.contracts.some((c: any) =>
-            c.name.toLowerCase().includes(lowerQuery)
-          )
-      );
+    const lowerQuery = query.toLowerCase().trim();
+    
+    // If query is generic "trending" (used by homepage), return top markets
+    if (query === 'trending') {
+      return markets
+        .slice(0, 20)
+        .map((market: any) => mapPredictItMarket(market));
     }
+
+    // Extract meaningful terms (remove stop words)
+    const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'will', 'be', 'is', 'are', 'was', 'were']);
+    const queryTerms = lowerQuery
+      .split(/\s+/)
+      .filter(term => term.length > 1 && !stopWords.has(term))
+      .map(term => term.replace(/[^a-z0-9]/g, ''))
+      .filter(term => term.length > 0);
+    
+    if (queryTerms.length === 0) return [];
+
+    // Use strict word boundary matching
+    let filtered = markets.filter((m: any) => {
+      const name = (m.name || '').toLowerCase();
+      const contracts = (m.contracts || []).map((c: any) => (c.name || '').toLowerCase()).join(' ');
+      const searchText = `${name} ${contracts}`;
+      
+      // All terms must match
+      return queryTerms.every(term => {
+        const isShortTerm = term.length <= 3;
+        if (isShortTerm) {
+          // Short terms must match as whole words
+          const wordBoundaryRegex = new RegExp(`\\b${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+          return wordBoundaryRegex.test(searchText);
+        } else {
+          // Longer terms can match as substring
+          return searchText.includes(term);
+        }
+      });
+    });
 
     // Return top 5
     return filtered
