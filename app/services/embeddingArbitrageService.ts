@@ -807,20 +807,18 @@ export async function findArbitrageWithEmbeddings(
 
       // Determine best buy and sell
       const m1YesPrice =
-        match.market1.outcomes?.[0]?.price || match.market1.price || 0;
+        match.market1.outcomes?.[0]?.price || 0;
       const m2YesPrice =
-        match.market2.outcomes?.[0]?.price || match.market2.price || 0;
+        match.market2.outcomes?.[0]?.price || 0;
 
       // Debug: Log price extraction
       if (opportunities.length < 3) {
         console.log(`[Debug] Match ${opportunities.length + 1} price extraction:`);
         console.log(`  Market 1: "${match.market1.title}"`);
         console.log(`    outcomes[0]?.price: ${match.market1.outcomes?.[0]?.price}`);
-        console.log(`    market.price: ${match.market1.price}`);
         console.log(`    extracted: ${m1YesPrice}`);
         console.log(`  Market 2: "${match.market2.title}"`);
         console.log(`    outcomes[0]?.price: ${match.market2.outcomes?.[0]?.price}`);
-        console.log(`    market.price: ${match.market2.price}`);
         console.log(`    extracted: ${m2YesPrice}`);
         console.log(`  Calculated spread: ${spread.toFixed(2)}%`);
       }
