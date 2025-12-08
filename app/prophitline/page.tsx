@@ -906,7 +906,6 @@ export default function ProphitLinePage() {
                     e.currentTarget.style.backgroundColor = '#131313';
                   }
                 }}
-                title={isLoading ? 'Refreshing...' : 'Refresh opportunities'}
               >
                 <svg
                   width="18"
