@@ -881,7 +881,6 @@ export default function ProphitLinePage() {
                 onClick={fetchOpportunities}
                 disabled={isLoading}
                 title={isLoading ? 'Refreshing...' : 'Refresh opportunities'}
-                disabled={isLoading}
                 style={{
                   width: '36px',
                   height: '36px',
