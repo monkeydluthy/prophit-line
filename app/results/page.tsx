@@ -54,19 +54,24 @@ function ResultsContent() {
     const fetchResults = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/parse-prediction', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query }),
-        });
+        const response = await fetch(`/api/markets/search?q=${encodeURIComponent(query)}`);
 
         if (!response.ok) {
           throw new Error('Failed to fetch results');
         }
 
-        const data = await response.json();
+        const markets = await response.json();
+        // Transform the response to match SearchResults format
+        const data: SearchResults = {
+          query,
+          parsedPrediction: {
+            event: query,
+            outcome: query,
+            timeframe: undefined,
+            conditions: [],
+          },
+          markets: Array.isArray(markets) ? markets : [],
+        };
         setResults(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
