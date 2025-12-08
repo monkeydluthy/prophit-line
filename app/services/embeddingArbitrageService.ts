@@ -441,7 +441,7 @@ function calculatePriceSpread(m1: MarketResult, m2: MarketResult): number {
 
   // Check market 1
   if (m1.outcomes && m1.outcomes.length > 0) {
-    const yesPrice = m1.outcomes[0]?.price || m1.price || 0;
+    const yesPrice = m1.outcomes[0]?.price || 0;
     if (yesPrice < bestBuyPrice) {
       bestBuyPrice = yesPrice;
       bestBuyMarket = m1;
@@ -454,7 +454,7 @@ function calculatePriceSpread(m1: MarketResult, m2: MarketResult): number {
 
   // Check market 2
   if (m2.outcomes && m2.outcomes.length > 0) {
-    const yesPrice = m2.outcomes[0]?.price || m2.price || 0;
+    const yesPrice = m2.outcomes[0]?.price || 0;
     if (yesPrice < bestBuyPrice) {
       bestBuyPrice = yesPrice;
       bestBuyMarket = m2;
