@@ -1,5 +1,5 @@
 [functions."snapshot-collector"]
-  schedule = "*/15 * * * *"
+  schedule = "0 * * * *"
 
 
 

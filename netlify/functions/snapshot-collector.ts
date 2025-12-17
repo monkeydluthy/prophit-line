@@ -32,10 +32,10 @@ const handler = async () => {
 
       const eventId = market.id.split(':').slice(1).join(':') || market.id;
       
-      // Get top 4-5 outcomes sorted by percentage
+      // Get top 3 outcomes sorted by percentage (reduced from 5 to save Supabase writes)
       const topOutcomes = (market.outcomes || [])
         .sort((a, b) => (b.percentage || 0) - (a.percentage || 0))
-        .slice(0, 5);
+        .slice(0, 3);
 
       // Create a snapshot record for each outcome
       topOutcomes.forEach((outcome, idx) => {
