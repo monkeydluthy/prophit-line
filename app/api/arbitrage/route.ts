@@ -2,17 +2,23 @@ import { NextResponse } from 'next/server';
 import { findArbitrageOpportunities } from '@/app/services/arbitrageService';
 import { findArbitrageWithEmbeddings } from '@/app/services/embeddingArbitrageService';
 import { getMatchrOpportunities, convertMatchrToOpportunity } from '@/app/services/matchrService';
+import { findSportsArbitrage } from '@/app/services/sportsArbitrageService';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '200');
     const minSpread = parseFloat(searchParams.get('minSpread') || '0.5');
-    const source = searchParams.get('source') || 'embeddings'; // 'embeddings', 'structured', or 'matchr'
+    const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
     
     let opportunities;
     
-    if (source === 'matchr') {
+    if (source === 'sports') {
+      // Use new sports arbitrage service (event-based, opposing outcomes)
+      // For sports arbitrage, use a higher limit to find more matches
+      const sportsLimit = Math.max(limit, 2000);
+      opportunities = await findSportsArbitrage(sportsLimit, minSpread);
+    } else if (source === 'matchr') {
       // Use Matchr's API directly
       try {
         const matchrData = await getMatchrOpportunities(

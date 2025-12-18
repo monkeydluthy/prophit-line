@@ -3,33 +3,156 @@ import { MarketResult } from '@/types';
 const API_URL = 'https://gamma-api.polymarket.com';
 const CLOB_URL = 'https://clob.polymarket.com';
 
+/**
+ * Fetch Polymarket events filtered by sport
+ * Fetches a large set of events and filters client-side by sport keywords in slugs/links
+ */
+export async function getPolymarketEventsBySport(
+  sport: string,
+  limit: number = 500
+): Promise<MarketResult[]> {
+  try {
+    // Map our sport codes to Polymarket slug patterns
+    const sportPatterns: Record<string, string[]> = {
+      'nfl': ['nfl-', '/nfl/', '/sports/nfl/'],
+      'nba': ['nba-', '/nba/', '/sports/nba/'],
+      'nhl': ['nhl-', '/nhl/', '/sports/nhl/'],
+      'cbb': ['cbb-', '/cbb/', '/sports/cbb/', 'cwbb-', '/cwbb/'],
+      'cfb': ['cfb-', '/cfb/', '/sports/cfb/'],
+    };
+    
+    const patterns = sportPatterns[sport] || [];
+    if (patterns.length === 0) return [];
+    
+    // Fetch a large set of events and filter by sport
+    // For NFL, we need to fetch more events since there are many non-sports events
+    // Increased to 5000 for NFL to ensure we capture lower-volume games
+    const fetchLimit = sport === 'nfl' ? 5000 : Math.min(limit * 3, 2000);
+    const params = new URLSearchParams({
+      limit: String(fetchLimit),
+      active: 'true',
+      archived: 'false',
+      closed: 'false',
+      order: 'volume',
+    });
+    
+    const response = await fetch(
+      `${API_URL}/events/pagination?${params.toString()}`,
+      { cache: 'no-store' }
+    );
+    
+    if (!response.ok) {
+      console.error(`Polymarket getEventsBySport error: ${response.status}`);
+      return [];
+    }
+    
+    const data = await response.json();
+    const events = Array.isArray(data?.data) ? data.data : [];
+    
+    // Filter events by checking if any market slug/link contains sport pattern
+    const filtered = events.filter((event: any) => {
+      if (!event.markets || !Array.isArray(event.markets)) return false;
+      
+      // Also check event slug if available
+      const eventSlug = (event.slug || '').toLowerCase();
+      
+      return event.markets.some((market: any) => {
+        const slug = (market.slug || '').toLowerCase();
+        const link = market.slug ? `https://polymarket.com/event/${market.slug}` : '';
+        const title = (event.title || '').toLowerCase();
+        
+        // Check if slug/link/title contains any sport pattern
+        return patterns.some(pattern => 
+          slug.includes(pattern.toLowerCase()) || 
+          link.includes(pattern.toLowerCase()) ||
+          title.includes(pattern.toLowerCase()) ||
+          eventSlug.includes(pattern.toLowerCase())
+        );
+      });
+    });
+    
+    console.log(`[Polymarket] getEventsBySport("${sport}"): fetched ${events.length} events, filtered to ${filtered.length} ${sport} events`);
+    
+    // Log sample slugs to debug
+    if (filtered.length > 0 && sport === 'nfl') {
+      const sampleSlugs = filtered.slice(0, 10).map((e: any) => {
+        const marketSlug = e.markets?.[0]?.slug || 'no market slug';
+        const eventSlug = e.slug || 'no event slug';
+        return `${marketSlug} (event: ${eventSlug})`;
+      });
+      console.log(`[Polymarket] Sample NFL slugs (first 10):`, sampleSlugs);
+      
+      // Check if we have the Rams vs Seahawks game
+      const ramsSeahawks = filtered.find((e: any) => {
+        const slug = (e.markets?.[0]?.slug || e.slug || '').toLowerCase();
+        return slug.includes('nfl-la-sea') || slug.includes('nfl-sea-la');
+      });
+      if (ramsSeahawks) {
+        console.log(`[Polymarket] ✓ Found Rams vs Seahawks game:`, ramsSeahawks.markets?.[0]?.slug || ramsSeahawks.slug);
+      } else {
+        console.log(`[Polymarket] ✗ Rams vs Seahawks game NOT found in ${filtered.length} NFL events`);
+      }
+    }
+    
+    return filtered
+      .slice(0, limit)
+      .map((event: any) => mapPolymarketEvent(event));
+  } catch (error) {
+    console.error('Polymarket getEventsBySport error:', error);
+    return [];
+  }
+}
+
 export async function searchPolymarket(query: string): Promise<MarketResult[]> {
   try {
+    const combinedEvents: any[] = [];
+    
+    // Try multiple search approaches
+    // 1. Direct search endpoint
     const directResponse = await fetch(
       `${API_URL}/events?q=${encodeURIComponent(
         query
-      )}&limit=20&closed=false&order=volume`
+      )}&limit=50&closed=false&order=volume`,
+      { cache: 'no-store' }
     );
-
-    const combinedEvents: any[] = [];
 
     if (directResponse.ok) {
       const directData = await directResponse.json();
       if (Array.isArray(directData)) {
         combinedEvents.push(...directData);
+      } else if (directData?.data && Array.isArray(directData.data)) {
+        combinedEvents.push(...directData.data);
       }
     }
 
-    const fallbackResponse = await fetch(
-      `${API_URL}/events/pagination?limit=200&active=true&archived=false&closed=false&order=volume`
+    // 2. Try pagination endpoint with search
+    const paginationResponse = await fetch(
+      `${API_URL}/events/pagination?limit=200&active=true&archived=false&closed=false&order=volume&q=${encodeURIComponent(query)}`,
+      { cache: 'no-store' }
     );
 
-    if (fallbackResponse.ok) {
-      const fallbackJson = await fallbackResponse.json();
-      const fallbackEvents = Array.isArray(fallbackJson?.data)
-        ? fallbackJson.data
+    if (paginationResponse.ok) {
+      const paginationJson = await paginationResponse.json();
+      const paginationEvents = Array.isArray(paginationJson?.data)
+        ? paginationJson.data
         : [];
-      combinedEvents.push(...fallbackEvents);
+      combinedEvents.push(...paginationEvents);
+    }
+
+    // 3. Fallback: get trending and filter client-side
+    if (combinedEvents.length === 0) {
+      const fallbackResponse = await fetch(
+        `${API_URL}/events/pagination?limit=500&active=true&archived=false&closed=false&order=volume`,
+        { cache: 'no-store' }
+      );
+
+      if (fallbackResponse.ok) {
+        const fallbackJson = await fallbackResponse.json();
+        const fallbackEvents = Array.isArray(fallbackJson?.data)
+          ? fallbackJson.data
+          : [];
+        combinedEvents.push(...fallbackEvents);
+      }
     }
 
     const filtered = filterEventsByQuery(combinedEvents, query);
@@ -83,10 +206,11 @@ export async function getPolymarketTrending(
       order: 'volume',
     });
 
+    // Disable caching for large event requests (they exceed 2MB cache limit)
     const response = await fetch(
       `${API_URL}/events/pagination?${params.toString()}`,
       {
-        next: { revalidate: 60 },
+        cache: 'no-store', // Large responses can't be cached anyway
       }
     );
 
@@ -237,6 +361,24 @@ function mapPolymarketEvent(event: any): MarketResult {
   let outcomes = [];
   const markets = Array.isArray(event.markets) ? event.markets : [];
   
+  // Detect sport context from market slug/link
+  let sportContext = '';
+  const firstMarket = markets[0];
+  if (firstMarket?.slug) {
+    const slug = firstMarket.slug.toLowerCase();
+    if (slug.startsWith('nfl-') || slug.includes('/nfl/') || slug.includes('/sports/nfl/')) {
+      sportContext = 'nfl';
+    } else if (slug.startsWith('nba-') || slug.includes('/nba/') || slug.includes('/sports/nba/')) {
+      sportContext = 'nba';
+    } else if (slug.startsWith('nhl-') || slug.includes('/nhl/') || slug.includes('/sports/nhl/')) {
+      sportContext = 'nhl';
+    } else if (slug.startsWith('cfb-') || slug.includes('/cfb/') || slug.includes('/sports/cfb/')) {
+      sportContext = 'cfb';
+    } else if (slug.startsWith('cbb-') || slug.startsWith('cwbb-') || slug.includes('/cbb/') || slug.includes('/cwbb/') || slug.includes('/sports/cbb/')) {
+      sportContext = 'cbb';
+    }
+  }
+  
   // If no markets, we still want to create a market result, but log it
   if (markets.length === 0) {
     console.warn(`Event ${event.id} has no markets array or empty markets`);
@@ -350,7 +492,7 @@ function mapPolymarketEvent(event: any): MarketResult {
     ? parseFloat(event.liquidity) || 0
     : (event.liquidity || event.liquidityNum || 0);
 
-  return {
+  const result: any = {
     id: `polymarket:${event.id}`,
     platform: 'Polymarket',
     title: event.title,
@@ -358,15 +500,23 @@ function mapPolymarketEvent(event: any): MarketResult {
     outcomes: displayOutcomes,
     volume: formatCurrency(eventVolume),
     liquidity: formatCurrency(eventLiquidity),
+    // Store ISO date string (YYYY-MM-DD) for reliable date extraction and matching
+    // Format for display can be done in the UI if needed
     date: event.endDate
-      ? new Date(event.endDate).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })
-      : 'N/A',
-    link: `https://polymarket.com/event/${event.slug}`,
+      ? new Date(event.endDate).toISOString().split('T')[0] // YYYY-MM-DD format
+      : '',
+    link: markets[0]?.slug 
+      ? `https://polymarket.com/event/${markets[0].slug}` 
+      : (event.slug ? `https://polymarket.com/event/${event.slug}` : ''),
     markets: childMarkets,
   };
+  
+  // Add sport context if detected
+  if (sportContext) {
+    result.sportContext = sportContext;
+  }
+  
+  return result;
 }
 
 function formatCurrency(value: number | string | undefined): string {

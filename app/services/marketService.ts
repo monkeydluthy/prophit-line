@@ -83,9 +83,12 @@ export async function searchMarkets(
 export async function getFrontPageMarkets(
   perPlatformLimit: number = 300
 ): Promise<MarketResult[]> {
-  // Ensure we don't exceed API limits (Kalshi supports up to 500)
-  const kalshiLimit = Math.min(perPlatformLimit, 500);
-  const polyLimit = Math.min(perPlatformLimit, 500);
+  // For arbitrage, we need more markets to find matches
+  // Kalshi supports up to 500, but Polymarket pagination can go higher
+  // Use higher limits when requested limit is high (arbitrage use case)
+  const isArbitrageFetch = perPlatformLimit >= 1000;
+  const kalshiLimit = isArbitrageFetch ? 500 : Math.min(perPlatformLimit, 500);
+  const polyLimit = isArbitrageFetch ? Math.min(perPlatformLimit, 2000) : Math.min(perPlatformLimit, 500);
   const predictitLimit = Math.min(perPlatformLimit, 50);
 
   const [polymarketTrending, kalshiTrending, predictitTrending] =

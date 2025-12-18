@@ -487,12 +487,13 @@ function mapKalshiEvent(event: any): MarketResult {
     liquidity: event.liquidity
       ? formatCurrency(normalizeKalshiMoney(event.liquidity))
       : 'N/A',
-    date: markets[0]?.expiration_time
-      ? new Date(markets[0].expiration_time).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-        })
-      : 'N/A',
+    // Store ISO date string (YYYY-MM-DD) for reliable date extraction and matching
+    // Prefer target_datetime (game date) over expiration_time (market close time)
+    date: event.target_datetime
+      ? new Date(event.target_datetime).toISOString().split('T')[0] // YYYY-MM-DD format
+      : markets[0]?.expiration_time
+      ? new Date(markets[0].expiration_time).toISOString().split('T')[0] // YYYY-MM-DD format
+      : '',
     link: buildKalshiLink(
       seriesTicker,
       event.sub_title || event.title,
@@ -684,6 +685,10 @@ async function fetchKalshiEvents(limit: number = 500): Promise<any[]> {
         event.question =
           eventData.title || eventData.question || eventData.event_title;
         event.sub_title = eventData.sub_title || event.sub_title;
+        // Store target_datetime (game date) if available - this is more accurate than expiration_time
+        if (eventData.target_datetime) {
+          event.target_datetime = eventData.target_datetime;
+        }
         if (event.title) eventDataFoundCount++;
       }
 
@@ -862,10 +867,11 @@ async function fetchKalshiEventsByTickers(
     });
 
     try {
+      // Disable caching for large event batch requests (they exceed 2MB cache limit)
       const response = await fetch(
         `${PUBLIC_API}/events/?${params.toString()}`,
         {
-          next: { revalidate: 30 },
+          cache: 'no-store', // Large responses can't be cached anyway
         }
       );
 
