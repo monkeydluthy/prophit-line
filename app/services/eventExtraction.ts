@@ -391,6 +391,45 @@ export function extractTeams(text: string): string[] {
 }
 
 /**
+ * Validate that teams belong to the correct sport
+ * Returns true if all teams are valid for the given sport
+ */
+export function validateTeamsForSport(teams: string[], sport: string): boolean {
+  if (teams.length !== 2) return false;
+  
+  // Define teams by sport
+  const nflTeams = new Set(['saints', 'buccaneers', 'packers', 'chiefs', '49ers', 'bills', 'bengals', 'ravens', 'patriots', 'cowboys', 'eagles', 'rams', 'chargers', 'giants', 'jets', 'bears', 'dolphins', 'falcons', 'broncos', 'lions', 'texans', 'colts', 'jaguars', 'vikings', 'raiders', 'seahawks', 'titans', 'commanders', 'panthers', 'cardinals', 'steelers', 'browns']);
+  const nbaTeams = new Set(['celtics', 'bucks', 'nuggets', 'hornets', 'knicks', 'nets', 'lakers', 'clippers', 'warriors', 'heat', 'suns', 'mavericks', 'rockets', 'spurs', 'thunder', 'trail blazers', 'kings', 'pelicans', 'grizzlies', 'timberwolves', 'jazz', 'wizards', 'raptors', '76ers', 'pacers', 'cavaliers', 'pistons', 'magic', 'hawks']);
+  const nhlTeams = new Set(['avalanche', 'bruins', 'blackhawks', 'hurricanes', 'blues', 'blue jackets', 'capitals', 'canucks', 'flames', 'flyers', 'islanders', 'lightning', 'maple leafs', 'oilers', 'penguins', 'predators', 'rangers', 'red wings', 'sharks', 'wild', 'stars', 'ducks', 'sabres', 'devils', 'senators', 'kraken', 'golden knights']);
+  const cbbTeams = new Set(['tar heels', 'blue devils', 'jayhawks', 'aztecs', 'mountaineers', 'hoosiers', 'boilermakers', 'razorbacks', 'tigers', 'gators', 'volunteers', 'aggies', 'crimson tide', 'buckeyes', 'huskies', 'wildcats', 'cardinals', 'spartans', 'wolverines', 'bulldogs', 'longhorns', 'fighting irish', 'badgers', 'seminoles', 'cougars', 'bearcats', 'hawkeyes']);
+  const cfbTeams = new Set(['crimson tide', 'tigers', 'fighting irish', 'buckeyes', 'wolverines', 'bulldogs', 'longhorns', 'gators', 'trojans', 'sooners', 'badgers', 'seminoles', 'ducks', 'hurricanes', 'huskies', 'cougars', 'wildcats', 'cardinals', 'bearcats', 'spartans', 'nittany lions', 'hawkeyes']);
+  
+  let sportTeams: Set<string>;
+  switch (sport.toLowerCase()) {
+    case 'nfl':
+      sportTeams = nflTeams;
+      break;
+    case 'nba':
+      sportTeams = nbaTeams;
+      break;
+    case 'nhl':
+      sportTeams = nhlTeams;
+      break;
+    case 'cbb':
+      sportTeams = cbbTeams;
+      break;
+    case 'cfb':
+      sportTeams = cfbTeams;
+      break;
+    default:
+      return true; // Unknown sport, allow all teams
+  }
+  
+  // Both teams must belong to this sport
+  return teams.every(team => sportTeams.has(team.toLowerCase()));
+}
+
+/**
  * Extract date from text (various formats: YYYY-MM-DD, Dec 18, 12/18, etc.)
  */
 export function extractDate(text: string): string | null {

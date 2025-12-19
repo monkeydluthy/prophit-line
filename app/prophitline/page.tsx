@@ -45,7 +45,7 @@ export default function ProphitLinePage() {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [liquidityFilter, setLiquidityFilter] = useState<number>(1); // Default $1 (no effective limit)
-  const [expandedCalculators, setExpandedCalculators] = useState<Set<string>>(new Set());
+  const [selectedCalculator, setSelectedCalculator] = useState<string | null>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -1185,7 +1185,7 @@ export default function ProphitLinePage() {
               gap: isMobile ? '16px' : '20px',
             }}
           >
-            {sortedOpportunities.map((opp) => {
+            {sortedOpportunities.map((opp, index) => {
               const buyMarket = opp.bestBuy.market;
               const sellMarket = opp.bestSell.market;
               // Use the matched outcome index if available, otherwise use first outcome
@@ -1196,7 +1196,7 @@ export default function ProphitLinePage() {
               
               return (
                 <div
-                  key={opp.id}
+                  key={`${opp.id}-${index}`}
                   style={{
                     backgroundColor: '#131313',
                     border: '1px solid #222',
@@ -1390,14 +1390,7 @@ export default function ProphitLinePage() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        const isExpanded = expandedCalculators.has(opp.id);
-                        const newExpanded = new Set(expandedCalculators);
-                        if (isExpanded) {
-                          newExpanded.delete(opp.id);
-                        } else {
-                          newExpanded.add(opp.id);
-                        }
-                        setExpandedCalculators(newExpanded);
+                        setSelectedCalculator(opp.id);
                       }}
                       style={{
                         flex: 1,
@@ -1430,19 +1423,15 @@ export default function ProphitLinePage() {
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
-                        style={{
-                          transform: expandedCalculators.has(opp.id) ? 'rotate(180deg)' : 'rotate(0deg)',
-                          transition: 'transform 0.2s ease',
-                        }}
                       >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
                           strokeWidth={2}
-                          d="M19 9l-7 7-7-7"
+                          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
                         />
                       </svg>
-                      <span>{expandedCalculators.has(opp.id) ? 'Hide' : 'Show'} Calculator</span>
+                      <span>Show Calculator</span>
                     </button>
                     <button
                       onClick={(e) => {
@@ -1490,10 +1479,6 @@ export default function ProphitLinePage() {
                     </button>
                   </div>
 
-                  {/* Calculator (shown when expanded) */}
-                  {expandedCalculators.has(opp.id) && (
-                    <ArbitrageCalculator opportunity={opp} defaultInvestment={1000} />
-                  )}
 
                   {/* Bottom Stats */}
                   <div
@@ -1532,6 +1517,111 @@ export default function ProphitLinePage() {
         )}
       </div>
     </div>
+
+    {/* Calculator Modal */}
+    {selectedCalculator && (() => {
+      const opp = opportunities.find(o => o.id === selectedCalculator);
+      if (!opp) return null;
+      
+      return (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedCalculator(null);
+            }
+          }}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: isMobile ? '16px' : '24px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#131313',
+              border: '1px solid #333',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '900px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              position: 'relative',
+              padding: isMobile ? '20px' : '32px',
+            }}
+          >
+            {/* Close Button */}
+            <button
+              onClick={() => setSelectedCalculator(null)}
+              style={{
+                position: 'absolute',
+                top: isMobile ? '16px' : '24px',
+                right: isMobile ? '16px' : '24px',
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                backgroundColor: '#1a1a1a',
+                border: '1px solid #333',
+                color: '#ffffff',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#222';
+                e.currentTarget.style.borderColor = '#444';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#1a1a1a';
+                e.currentTarget.style.borderColor = '#333';
+              }}
+            >
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            {/* Modal Title */}
+            <h2
+              style={{
+                fontSize: isMobile ? '20px' : '24px',
+                fontWeight: '700',
+                color: '#ffffff',
+                marginBottom: '24px',
+                paddingRight: '40px',
+              }}
+            >
+              Arbitrage Calculator
+            </h2>
+
+            {/* Calculator Component */}
+            <ArbitrageCalculator opportunity={opp} defaultInvestment={1000} />
+          </div>
+        </div>
+      );
+    })()}
     </>
   );
 }

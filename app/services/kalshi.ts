@@ -351,7 +351,27 @@ function mapKalshiEvent(event: any): MarketResult {
   let outcomes = [];
   const eventTicker =
     event.event_ticker || event.ticker || event.series_ticker || 'unknown';
-  const seriesTicker = event.series_ticker || eventTicker;
+  
+  // Extract series ticker from event ticker if not available
+  // Event ticker format: {SERIES_TICKER}-{DATE}{TEAMS} (e.g., KXNBAGAME-25DEC20BOSTOR)
+  // Series ticker is the part before the first dash followed by numbers
+  let seriesTicker = event.series_ticker;
+  if (!seriesTicker && eventTicker !== 'unknown') {
+    // Extract series ticker from event ticker (e.g., "KXNBAGAME-25DEC20BOSTOR" -> "KXNBAGAME")
+    // Look for pattern: SERIES_TICKER followed by dash and date (numbers)
+    const match = eventTicker.match(/^([A-Z]+?)(?:-\d)/);
+    if (match) {
+      seriesTicker = match[1];
+    } else {
+      // Fallback: if no pattern match, use event ticker (will be wrong but better than nothing)
+      seriesTicker = eventTicker;
+    }
+  }
+  
+  // Final fallback
+  if (!seriesTicker || seriesTicker === 'unknown') {
+    seriesTicker = eventTicker;
+  }
 
   const totalVolume = markets.reduce(
     (sum: number, m: any) => sum + normalizeKalshiMoney(m.volume),
@@ -496,8 +516,8 @@ function mapKalshiEvent(event: any): MarketResult {
       : '',
     link: buildKalshiLink(
       seriesTicker,
-      event.sub_title || event.title,
-      eventTicker
+      eventTicker,
+      event.series_title || markets[0]?.series_title || 'market'
     ),
     markets: childMarkets,
   };
@@ -575,6 +595,166 @@ async function fetchKalshiSeries(
   return seriesMap;
 }
 
+/**
+ * Fetch Kalshi events by sport using series_ticker filter
+ * This is more efficient than fetching all markets and filtering
+ * Returns MarketResult[] format for consistency with other functions
+ */
+export async function fetchKalshiEventsBySport(sport: string, limit: number = 500): Promise<MarketResult[]> {
+  // Map sport codes to Kalshi series tickers
+  // Based on URLs from kalshi.com:
+  // - NFL: kxnflgame -> KXNFLGAME
+  // - NBA: kxnbagame -> KXNBAGAME  
+  // - NHL: kxnhlgame -> KXNHLGAME
+  // - CBB: kxncaambgame -> KXNCAAMBGAME
+  const sportSeriesMap: Record<string, string> = {
+    'nfl': 'KXNFLGAME',
+    'nba': 'KXNBAGAME',
+    'nhl': 'KXNHLGAME',
+    'cbb': 'KXNCAAMBGAME',
+    'cfb': 'KXMVENCFBGAME', // Need to find CFB equivalent
+  };
+  
+  const seriesTicker = sportSeriesMap[sport.toLowerCase()];
+  if (!seriesTicker) {
+    console.log(`[Kalshi] No series ticker found for sport: ${sport}`);
+    return [];
+  }
+  
+  // Kalshi API has a hard limit of 1000 per request
+  const cappedLimit = Math.min(limit, 1000);
+  if (limit > 1000) {
+    console.log(`[Kalshi] Capping limit from ${limit} to 1000 (Kalshi API maximum)`);
+  }
+  
+  // Use /markets endpoint with series_ticker filter (authenticated API supports this)
+  // This is similar to how fetchKalshiEvents works but filtered by series
+  const endpoint = '/markets';
+  const queryParams = new URLSearchParams({
+    limit: String(cappedLimit),
+    status: 'open',
+    series_ticker: seriesTicker,
+  });
+  const fullPath = API_PREFIX + endpoint + '?' + queryParams.toString();
+
+  const headers = getHeaders('GET', fullPath);
+
+  if (!headers) {
+    console.warn(`[Kalshi] Missing credentials for fetchKalshiEventsBySport`);
+    return [];
+  }
+
+  try {
+    const response = await fetch(`${BASE_HOST}${fullPath}`, {
+      headers: headers as any,
+      next: { revalidate: 60 },
+    });
+
+    if (!response.ok) {
+      console.error(`[Kalshi] fetchKalshiEventsBySport error: ${response.status} for ${sport} (series_ticker: ${seriesTicker})`);
+      const text = await response.text();
+      console.error('[Kalshi] Error details:', text);
+      return [];
+    }
+
+    const data = await response.json();
+    const markets = data.markets || [];
+    
+    console.log(`[Kalshi] fetchKalshiEventsBySport("${sport}"): fetched ${markets.length} markets using series_ticker=${seriesTicker}`);
+    
+    if (markets.length > 0) {
+      console.log(`[Kalshi] Sample ${sport} market: "${markets[0].title}" (event_ticker: ${markets[0].event_ticker})`);
+    }
+    
+    // Group markets by event_ticker (same logic as fetchKalshiEvents)
+    const eventsMap = new Map<string, any>();
+    const uniqueSeriesTickers = new Set<string>();
+
+    for (const m of markets) {
+      if (!m.event_ticker) continue;
+
+      if (m.series_ticker) {
+        uniqueSeriesTickers.add(m.series_ticker);
+      }
+
+      if (!eventsMap.has(m.event_ticker)) {
+        eventsMap.set(m.event_ticker, {
+          ticker: m.event_ticker,
+          series_ticker: m.series_ticker,
+          title: null, // Will be set from event data
+          question: null,
+          markets: [],
+          volume: 0,
+        });
+      }
+      const event = eventsMap.get(m.event_ticker);
+      event.markets.push(m);
+      event.volume += m.volume || 0;
+    }
+    
+    // Fetch event data to get titles/questions (same as fetchKalshiEvents)
+    const uniqueEventTickers = Array.from(eventsMap.keys());
+    const eventDataMap = await fetchKalshiEventsByTickers(uniqueEventTickers);
+    const eventDataByTicker = new Map(
+      eventDataMap.map((evt: any) => [evt.ticker || evt.event_ticker, evt])
+    );
+    
+    // Also fetch series data as backup
+    const seriesMap = await fetchKalshiSeries(Array.from(uniqueSeriesTickers));
+    
+    // Update events with titles/questions from event data
+    const result = Array.from(eventsMap.values());
+    for (const event of result) {
+      // FIRST: Always get series title from series data (for URL building)
+      if (event.series_ticker && seriesMap.has(event.series_ticker)) {
+        const series = seriesMap.get(event.series_ticker);
+        // Store series title for URL building (e.g., "Professional Basketball Game")
+        event.series_title = series.title || series.question;
+      }
+      
+      // Fallback: try to get series title from first market
+      if (!event.series_title && event.markets.length > 0) {
+        const firstMarket = event.markets[0];
+        if (firstMarket.series_title) {
+          event.series_title = firstMarket.series_title;
+        }
+      }
+      
+      // THEN: Get event title from event data
+      if (eventDataByTicker.has(event.ticker)) {
+        const eventData = eventDataByTicker.get(event.ticker);
+        event.title = eventData.title || eventData.question || eventData.event_title;
+        event.question = eventData.title || eventData.question || eventData.event_title;
+        event.sub_title = eventData.sub_title || event.sub_title;
+        if (eventData.target_datetime) {
+          event.target_datetime = eventData.target_datetime;
+        }
+      }
+      
+      // Fallback to series data for event title (only if not set)
+      if (!event.title && event.series_ticker && seriesMap.has(event.series_ticker)) {
+        const series = seriesMap.get(event.series_ticker);
+        event.title = series.title || series.question;
+        event.question = series.title || series.question;
+        event.sub_title = series.sub_title || event.sub_title;
+      }
+      
+      // Final fallback for event title
+      if (!event.title && event.markets.length > 0) {
+        const firstMarket = event.markets[0];
+        event.title = firstMarket.series_title || firstMarket.event_title || firstMarket.title || `Kalshi Market ${event.ticker}`;
+        event.question = event.title;
+      }
+    }
+    
+    // Map to MarketResult format
+    return result.map(event => mapKalshiEvent(event));
+  } catch (error) {
+    console.error(`[Kalshi] fetchKalshiEventsBySport error for ${sport}:`, error);
+    return [];
+  }
+}
+
 async function fetchKalshiEvents(limit: number = 500): Promise<any[]> {
   const endpoint = '/markets';
   const queryParams = `?limit=${limit}`;
@@ -602,27 +782,9 @@ async function fetchKalshiEvents(limit: number = 500): Promise<any[]> {
     const data = await response.json();
     const markets = data.markets || [];
 
-    // Debug: Log first few markets to see structure
+    // Debug: Log sample market (simplified)
     if (markets.length > 0) {
-      console.log('[Kalshi Debug] Sample market from /markets endpoint:');
-      console.log('  Fields:', Object.keys(markets[0]));
-      console.log(
-        '  Sample:',
-        JSON.stringify(
-          {
-            event_ticker: markets[0].event_ticker,
-            title: markets[0].title,
-            subtitle: markets[0].subtitle,
-            event_title: markets[0].event_title,
-            series_title: markets[0].series_title,
-            question: markets[0].question,
-            sub_title: markets[0].sub_title,
-            series_ticker: markets[0].series_ticker,
-          },
-          null,
-          2
-        )
-      );
+      console.log(`[Kalshi] Sample market: "${markets[0].title}" (ticker: ${markets[0].event_ticker})`);
     }
 
     // Step 1: Group markets by event_ticker and collect series_tickers
@@ -882,27 +1044,9 @@ async function fetchKalshiEventsByTickers(
 
       const data = await response.json();
       if (Array.isArray(data?.events)) {
-        // Debug: Log first event structure from /events endpoint
+        // Debug: Log sample event (simplified)
         if (events.length === 0 && data.events.length > 0) {
-          console.log('[Kalshi Debug] Sample event from /events endpoint:');
-          console.log('  Fields:', Object.keys(data.events[0]));
-          console.log(
-            '  Sample:',
-            JSON.stringify(
-              {
-                event_ticker: data.events[0].event_ticker,
-                title: data.events[0].title,
-                subtitle: data.events[0].subtitle,
-                event_title: data.events[0].event_title,
-                series_title: data.events[0].series_title,
-                question: data.events[0].question,
-                sub_title: data.events[0].sub_title,
-                series_ticker: data.events[0].series_ticker,
-              },
-              null,
-              2
-            )
-          );
+          console.log(`[Kalshi] Sample event: "${data.events[0].title}" (${data.events[0].sub_title || 'no subtitle'})`);
         }
         events.push(...data.events);
       }
@@ -947,14 +1091,21 @@ function slugify(value: string = ''): string {
 
 function buildKalshiLink(
   seriesTicker: string,
-  subTitle: string,
-  eventTicker: string
+  eventTicker: string,
+  seriesTitle: string
 ): string {
-  const seriesSlug = slugify(seriesTicker);
-  const eventSlug = slugify(subTitle || 'market');
-  const tickerSlug = slugify(eventTicker);
-  if (!seriesSlug || !tickerSlug) {
+  // Kalshi URLs use the format: https://kalshi.com/markets/{series-ticker}/{series-slug}/{event-ticker}
+  // Example: https://kalshi.com/markets/kxnbagame/professional-basketball-game/kxnbagame-25dec20bostor
+  if (!seriesTicker || !eventTicker || seriesTicker === 'unknown' || eventTicker === 'unknown') {
     return 'https://kalshi.com/markets';
   }
-  return `https://kalshi.com/markets/${seriesSlug}/${eventSlug}/${tickerSlug}`;
+  
+  // Convert to lowercase for URL
+  const seriesSlug = seriesTicker.toLowerCase();
+  const eventSlug = eventTicker.toLowerCase();
+  
+  // Create series title slug (e.g., "Professional Basketball Game" -> "professional-basketball-game")
+  const seriesTitleSlug = slugify(seriesTitle || 'market');
+  
+  return `https://kalshi.com/markets/${seriesSlug}/${seriesTitleSlug}/${eventSlug}`;
 }

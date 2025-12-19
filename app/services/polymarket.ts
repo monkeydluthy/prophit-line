@@ -12,7 +12,59 @@ export async function getPolymarketEventsBySport(
   limit: number = 500
 ): Promise<MarketResult[]> {
   try {
-    // Map our sport codes to Polymarket slug patterns
+    // Map our sport codes to Polymarket API sport codes
+    const sportMap: Record<string, string> = {
+      'nfl': 'nfl',
+      'nba': 'nba',
+      'nhl': 'nhl',
+      'cbb': 'cbb',
+      'cfb': 'cfb',
+    };
+    
+    const polySport = sportMap[sport];
+    if (!polySport) return [];
+    
+    // Try the sports-specific endpoint first (more reliable)
+    try {
+      const response = await fetch(
+        `${API_URL}/sports/${polySport}/games`,
+        { cache: 'no-store' }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const games = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
+        
+        if (games.length > 0) {
+          console.log(`[Polymarket] getEventsBySport("${sport}"): fetched ${games.length} games from /sports/${polySport}/games`);
+          
+          // Check if we have the Rams vs Seahawks game (for NFL)
+          if (sport === 'nfl' && games.length > 0) {
+            const ramsSeahawks = games.find((g: any) => {
+              const slug = (g.slug || g.markets?.[0]?.slug || '').toLowerCase();
+              return slug.includes('nfl-la-sea') || slug.includes('nfl-sea-la') || slug.includes('la-sea') || slug.includes('sea-la');
+            });
+            if (ramsSeahawks) {
+              console.log(`[Polymarket] ✓ Found Rams vs Seahawks game:`, ramsSeahawks.slug || ramsSeahawks.markets?.[0]?.slug);
+            } else {
+              console.log(`[Polymarket] ✗ Rams vs Seahawks game NOT found in ${games.length} NFL games`);
+            }
+          }
+          
+          return games
+            .slice(0, limit)
+            .map((game: any) => mapPolymarketEvent(game));
+        } else {
+          console.log(`[Polymarket] /sports/${polySport}/games returned empty array, falling back to /events/pagination`);
+        }
+      } else {
+        console.log(`[Polymarket] /sports/${polySport}/games returned ${response.status}, falling back to /events/pagination`);
+      }
+    } catch (sportsError: any) {
+      console.log(`[Polymarket] /sports/${polySport}/games failed: ${sportsError?.message || sportsError}, falling back to /events/pagination`);
+    }
+    
+    // Fallback to filtering from general events endpoint
     const sportPatterns: Record<string, string[]> = {
       'nfl': ['nfl-', '/nfl/', '/sports/nfl/'],
       'nba': ['nba-', '/nba/', '/sports/nba/'],
@@ -22,76 +74,145 @@ export async function getPolymarketEventsBySport(
     };
     
     const patterns = sportPatterns[sport] || [];
-    if (patterns.length === 0) return [];
     
-    // Fetch a large set of events and filter by sport
-    // For NFL, we need to fetch more events since there are many non-sports events
-    // Increased to 5000 for NFL to ensure we capture lower-volume games
-    const fetchLimit = sport === 'nfl' ? 5000 : Math.min(limit * 3, 2000);
-    const params = new URLSearchParams({
-      limit: String(fetchLimit),
-      active: 'true',
-      archived: 'false',
-      closed: 'false',
-      order: 'volume',
-    });
+    // Adaptive approach: Search through pages to find where game events are
+    // Games are sorted by volume, so they may be at offset 2000+ (page 5+)
+    // We'll keep fetching until we find games, then continue a few more pages to get them all
+    const allEvents: any[] = [];
+    const maxPages = 15; // Maximum pages to search (7500 events)
+    const maxPagesWithoutGames = 3; // Stop after 3 consecutive pages with no games
     
-    const response = await fetch(
-      `${API_URL}/events/pagination?${params.toString()}`,
-      { cache: 'no-store' }
-    );
+    // Regex to identify game events (e.g., nfl-la-sea-2025-12-18, nba-lac-okc-2025-12-17)
+    // Define outside loop so it's accessible for counting later
+    const gamePatternRegex = new RegExp(`^${sport}-[a-z]{2,4}-[a-z]{2,4}-\\d{4}-\\d{2}-\\d{2}`);
     
-    if (!response.ok) {
-      console.error(`Polymarket getEventsBySport error: ${response.status}`);
-      return [];
+    let pagesWithoutGames = 0;
+    let foundGames = false;
+    let pagesFetched = 0;
+    
+    for (let page = 0; page < maxPages; page++) {
+      const params = new URLSearchParams({
+        limit: '500',
+        active: 'true',
+        archived: 'false',
+        closed: 'false',
+      });
+      
+      if (page > 0) {
+        params.set('offset', String(page * 500));
+      }
+      
+      try {
+        const response = await fetch(
+          `${API_URL}/events/pagination?${params.toString()}`,
+          { cache: 'no-store' }
+        );
+        
+        if (!response.ok) {
+          if (page === 0) {
+            console.error(`Polymarket getEventsBySport error: ${response.status}`);
+            return [];
+          }
+          break;
+        }
+        
+        const data = await response.json();
+        const pageEvents = Array.isArray(data?.data) ? data.data : [];
+        
+        if (pageEvents.length === 0) {
+          break;
+        }
+        
+        // Check if this page contains game events
+        const gamesOnThisPage = pageEvents.filter((event: any) => {
+          const slug = (event.slug || '').toLowerCase();
+          return gamePatternRegex.test(slug);
+        });
+        
+        if (gamesOnThisPage.length > 0) {
+          foundGames = true;
+          pagesWithoutGames = 0; // Reset counter
+          console.log(`[Polymarket] Found ${gamesOnThisPage.length} ${sport} game events at offset ${page * 500}`);
+        } else {
+          pagesWithoutGames++;
+          // If we've already found games and now hit pages without games, we might be past the game section
+          // But continue a bit more in case games are scattered
+          if (foundGames && pagesWithoutGames >= maxPagesWithoutGames) {
+            console.log(`[Polymarket] No more games found after ${pagesWithoutGames} pages, stopping search`);
+            break;
+          }
+        }
+        
+        allEvents.push(...pageEvents);
+        pagesFetched++;
+        
+        // If we got fewer than 500, we've reached the end
+        if (pageEvents.length < 500) {
+          break;
+        }
+      } catch (error) {
+        console.error(`Polymarket getEventsBySport page ${page} error:`, error);
+        if (page === 0) return [];
+        break;
+      }
     }
     
-    const data = await response.json();
-    const events = Array.isArray(data?.data) ? data.data : [];
+    // Dedupe by event ID
+    const uniqueEvents = Array.from(
+      new Map(allEvents.map((e: any) => [e.id, e])).values()
+    );
     
-    // Filter events by checking if any market slug/link contains sport pattern
+    const totalGames = uniqueEvents.filter((e: any) => gamePatternRegex.test((e.slug || '').toLowerCase())).length;
+    console.log(`[Polymarket] getEventsBySport("${sport}"): fetched ${uniqueEvents.length} unique events from ${allEvents.length} total (${pagesFetched} pages), found ${totalGames} game events`);
+    
+    const events = uniqueEvents;
+    
+    // Filter to include sport events, prioritizing actual games over futures/props
     const filtered = events.filter((event: any) => {
-      if (!event.markets || !Array.isArray(event.markets)) return false;
+      if (!event.markets || !Array.isArray(event.markets) || event.markets.length === 0) return false;
       
-      // Also check event slug if available
       const eventSlug = (event.slug || '').toLowerCase();
+      const eventTitle = (event.title || '').toLowerCase();
+      const eventDescription = ((event.description || '') + ' ' + (event.question || '')).toLowerCase();
       
-      return event.markets.some((market: any) => {
-        const slug = (market.slug || '').toLowerCase();
-        const link = market.slug ? `https://polymarket.com/event/${market.slug}` : '';
-        const title = (event.title || '').toLowerCase();
-        
-        // Check if slug/link/title contains any sport pattern
-        return patterns.some(pattern => 
-          slug.includes(pattern.toLowerCase()) || 
-          link.includes(pattern.toLowerCase()) ||
-          title.includes(pattern.toLowerCase()) ||
-          eventSlug.includes(pattern.toLowerCase())
-        );
+      // Check if this is a sport event
+      const eventMatches = patterns.some(pattern => {
+        const patternLower = pattern.toLowerCase();
+        return eventSlug.includes(patternLower) || 
+               eventTitle.includes(patternLower) ||
+               eventDescription.includes(patternLower);
       });
+      
+      if (!eventMatches) {
+        // Check markets for sport pattern
+        const marketMatches = event.markets.some((market: any) => {
+          const marketSlug = (market.slug || '').toLowerCase();
+          const marketTitle = (market.question || market.title || '').toLowerCase();
+          return patterns.some(pattern => {
+            const patternLower = pattern.toLowerCase();
+            return marketSlug.includes(patternLower) || marketTitle.includes(patternLower);
+          });
+        });
+        if (!marketMatches) return false;
+      }
+      
+      // Prefer actual game events over futures/props
+      // Game events typically have slugs like: nfl-la-sea-2025-12-18 or nba-lal-gsw-2025-12-19
+      // Futures/props have slugs like: nfl-mvp-2025, nba-champion-2026, etc.
+      const isLikelyGame = eventSlug.match(/^(nfl|nba|nhl|cfb|cbb)-[a-z]{2,4}-[a-z]{2,4}-\d{4}-\d{2}-\d{2}/);
+      const isFutureOrProp = eventSlug.match(/(mvp|champion|rookie|coach|player-of-the-year|stanley-cup|finals|playoff|award)/) ||
+                            eventTitle.match(/(mvp|champion|rookie|coach|player of the year|stanley cup|finals|playoff|award)/i);
+      
+      // Include all sport events, but we'll prioritize games in matching
+      return true;
     });
     
-    console.log(`[Polymarket] getEventsBySport("${sport}"): fetched ${events.length} events, filtered to ${filtered.length} ${sport} events`);
+    console.log(`[Polymarket] getEventsBySport("${sport}"): filtered to ${filtered.length} ${sport} events from ${events.length} total`);
     
-    // Log sample slugs to debug
-    if (filtered.length > 0 && sport === 'nfl') {
-      const sampleSlugs = filtered.slice(0, 10).map((e: any) => {
-        const marketSlug = e.markets?.[0]?.slug || 'no market slug';
-        const eventSlug = e.slug || 'no event slug';
-        return `${marketSlug} (event: ${eventSlug})`;
-      });
-      console.log(`[Polymarket] Sample NFL slugs (first 10):`, sampleSlugs);
-      
-      // Check if we have the Rams vs Seahawks game
-      const ramsSeahawks = filtered.find((e: any) => {
-        const slug = (e.markets?.[0]?.slug || e.slug || '').toLowerCase();
-        return slug.includes('nfl-la-sea') || slug.includes('nfl-sea-la');
-      });
-      if (ramsSeahawks) {
-        console.log(`[Polymarket] ✓ Found Rams vs Seahawks game:`, ramsSeahawks.markets?.[0]?.slug || ramsSeahawks.slug);
-      } else {
-        console.log(`[Polymarket] ✗ Rams vs Seahawks game NOT found in ${filtered.length} NFL events`);
-      }
+    // Log sample event slugs to see what we're getting
+    if (filtered.length > 0) {
+      const sampleSlugs = filtered.slice(0, 5).map((e: any) => e.slug || 'no-slug');
+      console.log(`[Polymarket] Sample ${sport} event slugs: ${sampleSlugs.join(', ')}`);
     }
     
     return filtered
@@ -249,15 +370,9 @@ export async function getPolymarketTrending(
       return [];
     }
 
-    // Log first event structure for debugging
+    // Log sample event (simplified)
     if (events.length > 0) {
-      console.log('First Polymarket event structure:', {
-        id: events[0]?.id,
-        title: events[0]?.title,
-        hasMarkets: !!events[0]?.markets,
-        marketsLength: Array.isArray(events[0]?.markets) ? events[0].markets.length : 0,
-        marketsKeys: events[0]?.markets?.[0] ? Object.keys(events[0].markets[0]) : [],
-      });
+      console.log(`[Polymarket] Sample event: "${events[0]?.title}" (${Array.isArray(events[0]?.markets) ? events[0].markets.length : 0} markets)`);
     }
 
     const mapped = events
@@ -293,12 +408,24 @@ export async function getPolymarketEvent(
   id: string
 ): Promise<MarketResult | null> {
   try {
-    const response = await fetch(`${API_URL}/events/${id}`);
-    if (!response.ok) return null;
+    const response = await fetch(`${API_URL}/events/${id}`, { cache: 'no-store' });
+    if (!response.ok) {
+      if (response.status === 422) {
+        // Try to get more info about why it failed
+        const errorText = await response.text().catch(() => '');
+        console.log(`[Polymarket] getEvent("${id}") returned 422. Error: ${errorText.substring(0, 200)}`);
+      } else if (response.status !== 404) {
+        console.log(`[Polymarket] getEvent("${id}") returned ${response.status}`);
+      }
+      return null;
+    }
     const event = await response.json();
+    if (!event || !event.markets || event.markets.length === 0) {
+      return null;
+    }
     return mapPolymarketEvent(event);
-  } catch (error) {
-    console.error('Polymarket get error:', error);
+  } catch (error: any) {
+    console.log(`[Polymarket] getEvent("${id}") error: ${error?.message || error}`);
     return null;
   }
 }

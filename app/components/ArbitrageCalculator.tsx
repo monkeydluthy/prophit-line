@@ -15,6 +15,7 @@ export default function ArbitrageCalculator({
   defaultInvestment = 1000 
 }: ArbitrageCalculatorProps) {
   const [investment, setInvestment] = useState(defaultInvestment);
+  const [investmentInput, setInvestmentInput] = useState(String(defaultInvestment));
   const [calc, setCalc] = useState<any>(null);
 
   useEffect(() => {
@@ -22,6 +23,28 @@ export default function ArbitrageCalculator({
     const calculation = calculateArbitrageForInvestment(opportunity, investment);
     setCalc(calculation);
   }, [opportunity, investment]);
+  
+  const handleInvestmentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Allow empty string for clearing
+    if (value === '') {
+      setInvestmentInput('');
+      setInvestment(0);
+      return;
+    }
+    
+    // Remove leading zeros (e.g., "0200" -> "200")
+    const cleanedValue = value.replace(/^0+(?=\d)/, '');
+    
+    // Parse to number
+    const numValue = parseFloat(cleanedValue);
+    
+    if (!isNaN(numValue) && numValue >= 0) {
+      setInvestmentInput(cleanedValue);
+      setInvestment(numValue);
+    }
+  };
 
   if (!calc) {
     return <div>Loading calculator...</div>;
@@ -44,11 +67,7 @@ export default function ArbitrageCalculator({
 
   return (
     <div style={{
-      backgroundColor: '#1a1a1a',
-      border: '1px solid #333',
-      borderRadius: '12px',
-      padding: '24px',
-      marginTop: '20px',
+      padding: '0',
     }}>
       {/* Investment Input */}
       <div style={{ marginBottom: '24px' }}>
@@ -62,11 +81,11 @@ export default function ArbitrageCalculator({
           Total Investment ($)
         </label>
         <input
-          type="number"
-          value={investment}
-          onChange={(e) => setInvestment(parseFloat(e.target.value) || 0)}
-          min="1"
-          step="1"
+          type="text"
+          inputMode="numeric"
+          value={investmentInput}
+          onChange={handleInvestmentChange}
+          placeholder="0"
           style={{
             width: '100%',
             padding: '12px',
@@ -283,11 +302,11 @@ export default function ArbitrageCalculator({
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px', marginBottom: '4px' }}>ROI</div>
             <div style={{
-              color: calc.roi > 0 ? '#10b981' : '#ef4444',
+              color: calc.roi > 0 ? '#10b981' : calc.roi < 0 ? '#ef4444' : '#94a3b8',
               fontSize: '20px',
               fontWeight: '700',
             }}>
-              {calc.roi >= 0 ? '+' : ''}{calc.roi.toFixed(2)}%
+              {investment === 0 || isNaN(calc.roi) ? '-' : `${calc.roi >= 0 ? '+' : ''}${calc.roi.toFixed(2)}%`}
             </div>
           </div>
         </div>
@@ -295,4 +314,5 @@ export default function ArbitrageCalculator({
     </div>
   );
 }
+
 
