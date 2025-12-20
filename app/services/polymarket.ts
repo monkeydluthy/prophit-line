@@ -260,20 +260,61 @@ export async function searchPolymarket(query: string): Promise<MarketResult[]> {
       combinedEvents.push(...paginationEvents);
     }
 
-    // 3. Fallback: get trending and filter client-side
-    if (combinedEvents.length === 0) {
-      const fallbackResponse = await fetch(
-        `${API_URL}/events/pagination?limit=500&active=true&archived=false&closed=false&order=volume`,
-        { cache: 'no-store' }
-      );
+    // 3. Fallback: get more trending markets and filter client-side
+    // If API search returned few or no results, fetch multiple pages to search through
+    // This helps find markets that the API search endpoint misses
+    if (combinedEvents.length < 10) {
+      console.log(`[Polymarket search] API search returned ${combinedEvents.length} results, fetching more markets for client-side filtering...`);
+      
+      // Fetch multiple pages (up to 5000 markets = 10 pages)
+      const maxPages = 10;
+      const perPage = 500;
+      
+      for (let page = 0; page < maxPages; page++) {
+        try {
+          const params = new URLSearchParams({
+            limit: String(perPage),
+            active: 'true',
+            archived: 'false',
+            closed: 'false',
+          });
+          
+          if (page > 0) {
+            params.set('offset', String(page * perPage));
+          }
+          
+          const fallbackResponse = await fetch(
+            `${API_URL}/events/pagination?${params.toString()}`,
+            { cache: 'no-store' }
+          );
 
-      if (fallbackResponse.ok) {
-        const fallbackJson = await fallbackResponse.json();
-        const fallbackEvents = Array.isArray(fallbackJson?.data)
-          ? fallbackJson.data
-          : [];
-        combinedEvents.push(...fallbackEvents);
+          if (fallbackResponse.ok) {
+            const fallbackJson = await fallbackResponse.json();
+            const fallbackEvents = Array.isArray(fallbackJson?.data)
+              ? fallbackJson.data
+              : [];
+            
+            if (fallbackEvents.length === 0) {
+              break; // No more results
+            }
+            
+            combinedEvents.push(...fallbackEvents);
+            
+            // If we have enough events now, we can break early after filtering
+            // But let's get at least 2000-3000 to be safe
+            if (combinedEvents.length >= 3000) {
+              break;
+            }
+          } else {
+            break; // API error, stop fetching
+          }
+        } catch (error) {
+          console.error(`[Polymarket search] Error fetching page ${page}:`, error);
+          break;
+        }
       }
+      
+      console.log(`[Polymarket search] Fetched ${combinedEvents.length} total events for client-side filtering`);
     }
 
     const filtered = filterEventsByQuery(combinedEvents, query);

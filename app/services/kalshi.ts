@@ -49,7 +49,10 @@ function getHeaders(method: string, path: string) {
 }
 
 export async function searchKalshi(query: string): Promise<MarketResult[]> {
-  const events = await fetchKalshiEvents();
+  // Fetch more events for better search coverage (increased from default 500 to 1000, API max)
+  // This helps find markets that might not be in the top 500 by volume
+  // Kalshi API has a hard limit of 1000 per request
+  const events = await fetchKalshiEvents(1000);
 
   const lowerQuery = query.toLowerCase().trim();
 
