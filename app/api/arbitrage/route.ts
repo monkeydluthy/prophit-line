@@ -8,7 +8,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '200');
-    const minSpread = parseFloat(searchParams.get('minSpread') || '0.5');
+    const minSpread = parseFloat(searchParams.get('minSpread') || '0.01');
     const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
     
     let opportunities;

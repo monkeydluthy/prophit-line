@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { ArbitrageOpportunity } from '@/app/services/arbitrageService';
 import { calculateArbitrageForInvestment } from '@/app/services/sportsArbitrageService';
 import { parseVolume } from '@/app/services/marketService';
+import { extractTeamFromOutcome } from '@/app/services/eventExtraction';
 
 interface ArbitrageCalculatorProps {
   opportunity: ArbitrageOpportunity;
@@ -57,10 +58,122 @@ export default function ArbitrageCalculator({
   const buyOutcome = buyMarket.outcomes?.[buyOutcomeIndex];
   const sellOutcome = sellMarket.outcomes?.[sellOutcomeIndex];
 
-  const team1 = (opportunity as any).team1 || buyOutcome?.name || 'Team 1';
-  const team2 = (opportunity as any).team2 || sellOutcome?.name || 'Team 2';
-  const outcome1Name = (opportunity as any).outcome1Name || buyOutcome?.name || 'Outcome 1';
-  const outcome2Name = (opportunity as any).outcome2Name || sellOutcome?.name || 'Outcome 2';
+  // City/State to team name mapping
+  const cityToTeamMap: Record<string, string[]> = {
+    'minnesota': ['timberwolves', 'wild', 'vikings', 'twins'],
+    'utah': ['jazz'],
+    'toronto': ['raptors', 'maple leafs', 'blue jays'],
+    'milwaukee': ['bucks', 'brewers'],
+    'boston': ['celtics', 'bruins', 'red sox', 'patriots'],
+    'los angeles': ['lakers', 'clippers', 'kings', 'dodgers', 'rams', 'chargers'],
+    'new york': ['knicks', 'nets', 'rangers', 'islanders', 'yankees', 'mets', 'giants', 'jets'],
+    'chicago': ['bulls', 'blackhawks', 'bears', 'cubs', 'white sox'],
+    'miami': ['heat', 'dolphins', 'marlins'],
+    'philadelphia': ['76ers', 'flyers', 'eagles', 'phillies'],
+    'phoenix': ['suns', 'cardinals', 'diamondbacks'],
+    'dallas': ['mavericks', 'stars', 'cowboys', 'rangers'],
+    'denver': ['nuggets', 'avalanche', 'broncos', 'rockies'],
+    'detroit': ['pistons', 'red wings', 'lions', 'tigers'],
+    'houston': ['rockets', 'texans', 'astros'],
+    'indiana': ['pacers', 'colts'],
+    'indianapolis': ['pacers', 'colts'],
+    'memphis': ['grizzlies'],
+    'new orleans': ['pelicans', 'saints'],
+    'oklahoma city': ['thunder'],
+    'orlando': ['magic'],
+    'portland': ['trail blazers'],
+    'sacramento': ['kings'],
+    'san antonio': ['spurs'],
+    'washington': ['wizards', 'capitals', 'commanders', 'nationals'],
+    'atlanta': ['hawks', 'falcons', 'braves'],
+    'charlotte': ['hornets', 'panthers'],
+    'cleveland': ['cavaliers', 'browns', 'guardians'],
+    'golden state': ['warriors'],
+    'brooklyn': ['nets'],
+    'oakland': ['athletics'],
+  };
+
+  // Helper to normalize and match team names
+  const normalizeTeam = (name: string): string => {
+    return name.toLowerCase().trim();
+  };
+
+  // Helper to resolve city/state name to actual team name
+  const resolveCityToTeam = (cityOrState: string, opportunityTeams: string[]): string | null => {
+    const cityLower = normalizeTeam(cityOrState);
+    
+    // Check city-to-team mapping
+    const possibleTeams = cityToTeamMap[cityLower];
+    if (possibleTeams) {
+      // Try to match with teams from the opportunity
+      for (const oppTeam of opportunityTeams) {
+        const oppTeamLower = normalizeTeam(oppTeam);
+        // Check if any of the possible teams match the opportunity team
+        if (possibleTeams.some(team => oppTeamLower.includes(team) || team.includes(oppTeamLower))) {
+          return oppTeam;
+        }
+      }
+    }
+    
+    // Direct match check
+    for (const oppTeam of opportunityTeams) {
+      const oppTeamLower = normalizeTeam(oppTeam);
+      if (cityLower === oppTeamLower || cityLower.includes(oppTeamLower) || oppTeamLower.includes(cityLower)) {
+        return oppTeam;
+      }
+    }
+    
+    return null;
+  };
+
+  // Helper to check if a city/state name matches a team name
+  const matchesTeam = (cityOrState: string, teamName: string): boolean => {
+    const cityLower = normalizeTeam(cityOrState);
+    const teamLower = normalizeTeam(teamName);
+    
+    // Direct match
+    if (cityLower === teamLower || cityLower.includes(teamLower) || teamLower.includes(teamLower)) {
+      return true;
+    }
+    
+    // Check city-to-team mapping
+    const possibleTeams = cityToTeamMap[cityLower];
+    if (possibleTeams) {
+      return possibleTeams.some(team => teamLower.includes(team) || team.includes(teamLower));
+    }
+    
+    return false;
+  };
+
+  // Extract team name using the shared service function
+  const extractTeamDisplayName = (title: string, outcomeName: string, outcome?: any): string => {
+    const oppTitle = opportunity.title || '';
+    const teams = oppTitle.split(/\s+(?:vs|Vs|VS|v\.?)\s+/i);
+    const opportunityTeams = teams.length === 2 ? teams.map(t => t.trim()) : [];
+    
+    // Use the shared extractTeamFromOutcome function
+    // Pass the outcome object which may contain teamName from Kalshi's yes_sub_title
+    const extractedTeam = extractTeamFromOutcome(outcomeName, title, opportunityTeams.length === 2 ? opportunityTeams : undefined, outcome);
+    
+    // If we got a team name, capitalize it nicely for display
+    if (extractedTeam) {
+      // Capitalize first letter of each word
+      return extractedTeam.split(' ').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+    }
+    
+    // Fallback to outcome name if we can't extract team
+    return outcomeName;
+  };
+
+  // Get team names using the shared extraction function
+  // Pass the outcome objects so we can use teamName from yes_sub_title if available
+  const buyTeamName = extractTeamDisplayName(buyMarket.title || '', buyOutcome?.name || 'Yes', buyOutcome);
+  const sellTeamName = extractTeamDisplayName(sellMarket.title || '', sellOutcome?.name || 'Yes', sellOutcome);
+  
+  const outcome1Name = buyTeamName;
+  const outcome2Name = sellTeamName;
 
   const buyVolume = parseVolume(buyMarket.volume || 0);
   const sellVolume = parseVolume(sellMarket.volume || 0);

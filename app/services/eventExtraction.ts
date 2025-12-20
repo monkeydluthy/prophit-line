@@ -511,32 +511,196 @@ export function extractEventSignature(market: MarketResult): string | null {
 
 /**
  * Extract which team an outcome represents
+ * @param outcomeName - The outcome name (e.g., "Yes", "No", "Milwaukee Bucks")
+ * @param marketTitle - The market title/question (e.g., "Minnesota Winner?")
+ * @param eventTeams - Optional: Array of both teams in the event (e.g., ["bucks", "timberwolves"])
+ *                     Used to determine the OTHER team when "Yes" on single-team questions
  */
-export function extractTeamFromOutcome(outcomeName: string, marketTitle: string): string | null {
+export function extractTeamFromOutcome(
+  outcomeName: string, 
+  marketTitle: string,
+  eventTeams?: string[],
+  outcomeData?: any // Optional: outcome object that may contain teamName or yes_sub_title
+): string | null {
   const outcomeLower = outcomeName.toLowerCase();
   const titleLower = marketTitle.toLowerCase();
+
+  // FIRST: Check if outcomeData has teamName (from Kalshi yes_sub_title/no_sub_title)
+  // This is the most reliable way to know which team an outcome refers to
+  if (outcomeData?.teamName) {
+    let teamName = outcomeData.teamName.toLowerCase().trim();
+    // Map city names to team nicknames using CITY_TO_TEAM
+    // e.g., "Milwaukee" -> "Bucks", "Minnesota" -> check context (could be Timberwolves, Vikings, etc.)
+    if (CITY_TO_TEAM[teamName]) {
+      // If we have event teams, prefer the team that matches the context
+      if (eventTeams && eventTeams.length === 2) {
+        const normalizedEventTeams = eventTeams.map(t => t.toLowerCase().trim());
+        const cityTeam = CITY_TO_TEAM[teamName].toLowerCase();
+        // Check if the city's default team is one of the event teams
+        if (normalizedEventTeams.some(et => et === cityTeam || et.includes(cityTeam) || cityTeam.includes(et))) {
+          return cityTeam;
+        }
+        // Otherwise, find which event team corresponds to this city using reverseCityMap logic
+        // But for now, just use the city's default team
+      }
+      return CITY_TO_TEAM[teamName].toLowerCase();
+    }
+    // If not in CITY_TO_TEAM, return as-is (might already be a team nickname)
+    return teamName;
+  }
 
   // Extract teams from both outcome name and market title
   const outcomeTeams = extractTeams(outcomeName);
   const titleTeams = extractTeams(marketTitle);
 
-  // If outcome name contains a team, use it
+  // If outcome name contains a team, use it (Polymarket case: "Milwaukee Bucks" outcome)
   if (outcomeTeams.length > 0) {
     return outcomeTeams[0];
   }
 
   // If outcome is "Yes" or "No", try to infer team from market title
-  // For example: "Will Rams win?" -> "Yes" outcome = Rams
-  // "Heat vs. Knicks" -> "Yes" outcome = Heat (first team), "No" = Knicks (second team)
   if (outcomeLower === 'yes' || outcomeLower === 'no') {
     // Extract teams from title
     if (titleTeams.length === 1) {
-      // Single team in title: "Yes" = that team wins
-      return titleTeams[0];
+      // Single team in title (e.g., "Minnesota Winner?")
+      // For Kalshi: "Yes" on "Minnesota Winner?" means the OTHER team wins (not Minnesota)
+      // "No" on "Minnesota Winner?" means Minnesota wins
+      let teamInQuestion = titleTeams[0];
+      const teamInQLower = teamInQuestion.toLowerCase();
+      
+      // If event teams are provided, use them to resolve city-to-team mapping
+      // e.g., if eventTeams = ["bucks", "timberwolves"] and teamInQuestion = "Minnesota",
+      // we can match "Minnesota" to "timberwolves" even though CITY_TO_TEAM["minnesota"] = "vikings"
+      if (eventTeams && eventTeams.length === 2) {
+        const normalize = (name: string) => name.toLowerCase().trim();
+        const eventTeamsNormalized = eventTeams.map(normalize);
+        
+        // Try to match the city/team in question to one of the event teams
+        // Check if any event team relates to the teamInQuestion (city or nickname)
+        let matchedTeam: string | null = null;
+        
+        // First, check all known city-to-team mappings that could apply to any event team
+        // This handles cases like "Minnesota" -> "timberwolves" even though CITY_TO_TEAM["minnesota"] = "vikings"
+        // We need to check if any event team could be from this city
+        const reverseCityMap: Record<string, string[]> = {
+          'minnesota': ['timberwolves', 'wild', 'vikings', 'twins'],
+          'utah': ['jazz'],
+          'toronto': ['raptors', 'maple leafs', 'blue jays'],
+          'milwaukee': ['bucks', 'brewers'],
+          'boston': ['celtics', 'bruins', 'red sox', 'patriots'],
+          'los angeles': ['lakers', 'clippers', 'kings', 'dodgers', 'rams', 'chargers'],
+          'new york': ['knicks', 'nets', 'rangers', 'islanders', 'yankees', 'mets', 'giants', 'jets'],
+          'chicago': ['bulls', 'blackhawks', 'bears', 'cubs', 'white sox'],
+          'miami': ['heat', 'dolphins', 'marlins'],
+          'philadelphia': ['76ers', 'flyers', 'eagles', 'phillies'],
+          'phoenix': ['suns', 'cardinals', 'diamondbacks'],
+          'dallas': ['mavericks', 'stars', 'cowboys', 'rangers'],
+          'denver': ['nuggets', 'avalanche', 'broncos', 'rockies'],
+          'detroit': ['pistons', 'red wings', 'lions', 'tigers'],
+          'houston': ['rockets', 'texans', 'astros'],
+          'indiana': ['pacers', 'colts'],
+          'indianapolis': ['pacers', 'colts'],
+          'memphis': ['grizzlies'],
+          'new orleans': ['pelicans', 'saints'],
+          'oklahoma city': ['thunder'],
+          'orlando': ['magic'],
+          'portland': ['trail blazers'],
+          'sacramento': ['kings'],
+          'san antonio': ['spurs'],
+          'washington': ['wizards', 'capitals', 'commanders', 'nationals'],
+          'atlanta': ['hawks', 'falcons', 'braves'],
+          'charlotte': ['hornets', 'panthers'],
+          'cleveland': ['cavaliers', 'browns', 'guardians'],
+          'golden state': ['warriors'],
+          'brooklyn': ['nets'],
+        };
+        
+        // Check if teamInQuestion is a city that could map to any of the event teams
+        if (reverseCityMap[teamInQLower]) {
+          const possibleTeams = reverseCityMap[teamInQLower];
+          for (const eventTeam of eventTeams) {
+            const eventTeamLower = normalize(eventTeam);
+            // Check if event team matches any of the possible teams for this city
+            if (possibleTeams.some(possibleTeam => {
+              const possibleTeamLower = normalize(possibleTeam);
+              return eventTeamLower === possibleTeamLower || 
+                     eventTeamLower.includes(possibleTeamLower) || 
+                     possibleTeamLower.includes(eventTeamLower);
+            })) {
+              matchedTeam = eventTeam;
+              break;
+            }
+          }
+        }
+        
+        // If no match yet, try direct matching
+        if (!matchedTeam) {
+          for (const eventTeam of eventTeams) {
+            const eventTeamLower = normalize(eventTeam);
+            // Direct match
+            if (eventTeamLower === teamInQLower || 
+                eventTeamLower.includes(teamInQLower) || 
+                teamInQLower.includes(eventTeamLower)) {
+              matchedTeam = eventTeam;
+              break;
+            }
+            // Check if city maps to this team (original mapping)
+            if (CITY_TO_TEAM[teamInQLower] === eventTeamLower) {
+              matchedTeam = eventTeam;
+              break;
+            }
+            // Check if event team's city matches
+            const eventTeamCity = Object.entries(CITY_TO_TEAM).find(([city, team]) => team === eventTeamLower)?.[0];
+            if (eventTeamCity === teamInQLower) {
+              matchedTeam = eventTeam;
+              break;
+            }
+          }
+        }
+        
+        if (outcomeLower === 'yes') {
+          // "Yes" = OTHER team wins
+          if (matchedTeam) {
+            // Find the OTHER team (not the matched one)
+            const otherTeam = eventTeams.find(t => normalize(t) !== normalize(matchedTeam!));
+            if (otherTeam) {
+              return otherTeam;
+            }
+          } else {
+            // Can't match team in question to event teams, try to find the other team anyway
+            // This is a fallback - might not work correctly
+            const otherTeam = eventTeams.find(t => {
+              const tNormalized = normalize(t);
+              return tNormalized !== teamInQLower && 
+                     !tNormalized.includes(teamInQLower) && 
+                     !teamInQLower.includes(tNormalized);
+            });
+            if (otherTeam) {
+              return otherTeam;
+            }
+          }
+          return null;
+        } else {
+          // "No" = the team in question wins
+          return matchedTeam || teamInQuestion;
+        }
+      } else {
+        // No event teams provided - use CITY_TO_TEAM mapping as fallback
+        if (CITY_TO_TEAM[teamInQLower]) {
+          teamInQuestion = CITY_TO_TEAM[teamInQLower];
+        }
+        
+        if (outcomeLower === 'yes') {
+          // Can't determine other team without event context
+          return null;
+        } else {
+          // "No" = the team in question wins
+          return teamInQuestion;
+        }
+      }
     } else if (titleTeams.length === 2) {
       // Two teams in title: "Yes" = first team wins, "No" = second team wins
       // Check title pattern to determine order (e.g., "Team A vs Team B" or "Team A @ Team B")
-      const titleLower = marketTitle.toLowerCase();
       const team1Index = titleLower.indexOf(titleTeams[0].toLowerCase());
       const team2Index = titleLower.indexOf(titleTeams[1].toLowerCase());
       
@@ -605,13 +769,14 @@ export function areOpposingOutcomes(
     return false;
   }
 
-  const teams = extractTeams(market1.title);
-  if (teams.length !== 2) {
+  // Extract teams from market titles to pass as event context
+  const eventTeams = extractTeams(market1.title);
+  if (eventTeams.length !== 2) {
     return false;
   }
 
-  const team1FromOutcome1 = extractTeamFromOutcome(outcome1Name, market1.title);
-  const team2FromOutcome2 = extractTeamFromOutcome(outcome2Name, market2.title);
+  const team1FromOutcome1 = extractTeamFromOutcome(outcome1Name, market1.title, eventTeams);
+  const team2FromOutcome2 = extractTeamFromOutcome(outcome2Name, market2.title, eventTeams);
 
   // If we can't determine teams from outcomes, check if outcomes are different
   if (!team1FromOutcome1 || !team2FromOutcome2) {
@@ -624,8 +789,8 @@ export function areOpposingOutcomes(
     if (outcome1Teams.length > 0 && outcome2Teams.length > 0) {
       // Both outcomes have team names
       return outcome1Teams[0] !== outcome2Teams[0] && 
-             teams.includes(outcome1Teams[0]) && 
-             teams.includes(outcome2Teams[0]);
+             eventTeams.includes(outcome1Teams[0]) && 
+             eventTeams.includes(outcome2Teams[0]);
     }
     
     return false;
@@ -633,7 +798,7 @@ export function areOpposingOutcomes(
 
   // Teams must be different and both must be in the event
   return team1FromOutcome1 !== team2FromOutcome2 && 
-         teams.includes(team1FromOutcome1) && 
-         teams.includes(team2FromOutcome2);
+         eventTeams.includes(team1FromOutcome1) && 
+         eventTeams.includes(team2FromOutcome2);
 }
 

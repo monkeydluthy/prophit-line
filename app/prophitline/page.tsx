@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { parseVolume } from '@/app/services/marketService';
 import ArbitrageCalculator from '@/app/components/ArbitrageCalculator';
+import { extractTeamFromOutcome } from '@/app/services/eventExtraction';
 
 interface ArbitrageOpportunity {
   id: string;
@@ -40,7 +41,7 @@ export default function ProphitLinePage() {
   const [opportunities, setOpportunities] = useState<ArbitrageOpportunity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'spread' | 'volume'>('spread');
-  const [minSpread, setMinSpread] = useState(0.5);
+  const [minSpread, setMinSpread] = useState(0.01);
   const [isMobile, setIsMobile] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -974,7 +975,8 @@ export default function ProphitLinePage() {
                   backgroundPosition: 'right 12px center',
                 }}
               >
-                <option value="0.5">All Spreads</option>
+                <option value="0.01">All Profitable</option>
+                <option value="0.5">0.5%+</option>
                 <option value="1">1%+</option>
                 <option value="3">3%+</option>
                 <option value="5">5%+</option>
@@ -1194,6 +1196,27 @@ export default function ProphitLinePage() {
               const buyOutcome = buyMarket.outcomes?.[buyOutcomeIndex] || { name: 'Yes', percentage: opp.bestBuy.price * 100 };
               const sellOutcome = sellMarket.outcomes?.[sellOutcomeIndex] || { name: 'Yes', percentage: opp.bestSell.price * 100 };
               
+              // Extract team names using the shared service function
+              const oppTitle = opp.title || '';
+              const teams = oppTitle.split(/\s+(?:vs|Vs|VS|v\.?)\s+/i);
+              const opportunityTeams = teams.length === 2 ? teams.map(t => t.trim()) : [];
+              
+              // Use extractTeamFromOutcome from eventExtraction service
+              // Pass the outcome objects so we can use teamName from Kalshi's yes_sub_title if available
+              const buyTeam = extractTeamFromOutcome(buyOutcome.name, buyMarket.title || '', opportunityTeams.length === 2 ? opportunityTeams : undefined, buyOutcome);
+              const sellTeam = extractTeamFromOutcome(sellOutcome.name, sellMarket.title || '', opportunityTeams.length === 2 ? opportunityTeams : undefined, sellOutcome);
+              
+              // Capitalize team names for display
+              const capitalizeTeam = (name: string | null) => {
+                if (!name) return 'Yes';
+                return name.split(' ').map(word => 
+                  word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+                ).join(' ');
+              };
+              
+              const buyTeamName = buyTeam ? capitalizeTeam(buyTeam) : buyOutcome.name;
+              const sellTeamName = sellTeam ? capitalizeTeam(sellTeam) : sellOutcome.name;
+              
               return (
                 <div
                   key={`${opp.id}-${index}`}
@@ -1247,8 +1270,13 @@ export default function ProphitLinePage() {
                   >
                     {/* Buy Platform Card */}
                     <div
-                      onClick={() => {
-                        router.push(`/market/${encodeURIComponent(buyMarket.id)}`);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (buyMarket.link) {
+                          window.open(buyMarket.link, '_blank', 'noopener,noreferrer');
+                        } else {
+                          router.push(`/market/${encodeURIComponent(buyMarket.id)}`);
+                        }
                       }}
                       style={{
                         flex: 1,
@@ -1287,7 +1315,7 @@ export default function ProphitLinePage() {
                           marginBottom: isMobile ? '6px' : '8px',
                         }}
                       >
-                        {buyOutcome.name}
+                        {buyTeamName}
                       </div>
                       <div
                         style={{
@@ -1323,8 +1351,13 @@ export default function ProphitLinePage() {
 
                     {/* Sell Platform Card */}
                     <div
-                      onClick={() => {
-                        router.push(`/market/${encodeURIComponent(sellMarket.id)}`);
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (sellMarket.link) {
+                          window.open(sellMarket.link, '_blank', 'noopener,noreferrer');
+                        } else {
+                          router.push(`/market/${encodeURIComponent(sellMarket.id)}`);
+                        }
                       }}
                       style={{
                         flex: 1,
@@ -1363,7 +1396,7 @@ export default function ProphitLinePage() {
                           marginBottom: isMobile ? '6px' : '8px',
                         }}
                       >
-                        {sellOutcome.name}
+                        {sellTeamName}
                       </div>
                       <div
                         style={{

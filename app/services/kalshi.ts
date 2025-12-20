@@ -405,23 +405,40 @@ function mapKalshiEvent(event: any): MarketResult {
     const yesPrice = m.yes_bid || m.last_price || 50;
     const noPrice = 100 - yesPrice;
 
+    // Store yes_sub_title and no_sub_title to know which team each outcome refers to
+    // yes_sub_title tells us which team "Yes" means (e.g., "Milwaukee" or "Minnesota")
     outcomes = [
       {
         name: 'Yes',
         percentage: yesPrice,
         color: 'green',
         price: yesPrice / 100,
+        // Store the team name that "Yes" refers to
+        teamName: m.yes_sub_title || null,
       },
-      { name: 'No', percentage: noPrice, color: 'red', price: noPrice / 100 },
+      { 
+        name: 'No', 
+        percentage: noPrice, 
+        color: 'red', 
+        price: noPrice / 100,
+        // Store the team name that "No" refers to
+        teamName: m.no_sub_title || null,
+      },
     ];
   } else {
+    // Multiple markets - each market represents a different outcome
+    // Store yes_sub_title to know which team "Yes" refers to for each market
     outcomes = markets.map((m: any) => {
       const probability = m.yes_bid || m.last_price || 0;
       return {
-        name: deriveShortName(m.subtitle || m.title),
+        name: 'Yes', // For multi-market events, each outcome is still "Yes" on its market
         percentage: probability,
         color: 'blue',
         price: probability / 100,
+        // Store the team name that this outcome refers to (from yes_sub_title)
+        teamName: m.yes_sub_title || null,
+        // Also store market ticker to identify which market this outcome belongs to
+        marketTicker: m.ticker || null,
       };
     });
 
@@ -602,17 +619,19 @@ async function fetchKalshiSeries(
  */
 export async function fetchKalshiEventsBySport(sport: string, limit: number = 500): Promise<MarketResult[]> {
   // Map sport codes to Kalshi series tickers
-  // Based on URLs from kalshi.com:
-  // - NFL: kxnflgame -> KXNFLGAME
-  // - NBA: kxnbagame -> KXNBAGAME  
-  // - NHL: kxnhlgame -> KXNHLGAME
-  // - CBB: kxncaambgame -> KXNCAAMBGAME
+  // Based on URLs from kalshi.com and API verification:
+  // - NFL: kxnflgame -> KXNFLGAME (verified working)
+  // - NBA: kxnbagame -> KXNBAGAME (verified working)
+  // - NHL: kxnhlgame -> KXNHLGAME (verified working)
+  // - CBB: kxncaambgame -> KXNCAAMBGAME (verified working - returns "Men's College Basketball Men's Game")
+  // - CFB: kxncaafgame -> KXNCAAFGAME (verified working - returns "College Football Game" for FBS games)
+  //   Note: There's also KXNCAAFCSGAME for FCS games, but we use the main FBS ticker
   const sportSeriesMap: Record<string, string> = {
     'nfl': 'KXNFLGAME',
     'nba': 'KXNBAGAME',
     'nhl': 'KXNHLGAME',
     'cbb': 'KXNCAAMBGAME',
-    'cfb': 'KXMVENCFBGAME', // Need to find CFB equivalent
+    'cfb': 'KXNCAAFGAME', // College Football (FBS) - verified working
   };
   
   const seriesTicker = sportSeriesMap[sport.toLowerCase()];

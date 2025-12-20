@@ -84,7 +84,7 @@ function calculateArbitrage(
  */
 export async function findSportsArbitrage(
   limit: number = 200,
-  minSpread: number = 0.5 // Minimum spread % to consider (used as minimum ROI threshold)
+  minSpread: number = 0.01 // Minimum spread % to consider (lowered to show more opportunities, even small ones)
 ): Promise<ArbitrageOpportunity[]> {
   console.log(`[SportsArb] Starting sport-by-sport arbitrage search (limit: ${limit})...`);
   
@@ -217,8 +217,8 @@ async function findArbitrageForSport(
         marketSport = 'nhl';
       }
     } else if (sport === 'cfb') {
-      // Kalshi uses KXMVENCFBGAME format (but may not have active markets)
-      if (/KXMVENCFBGAME/i.test(eventTicker) ||
+      // Kalshi uses KXNCAAFGAME format for college football (FBS games)
+      if (/KXNCAAFGAME/i.test(eventTicker) ||
           /\/event\/cfb-/i.test(marketLink) ||
           /\b(cfb|college football)\b/i.test(title)) {
         marketSport = 'cfb';
@@ -708,17 +708,35 @@ async function findArbitrageForSport(
     eventsWithBothPlatforms++;
     
     // Filter to team win markets only (exclude player props, totals, etc.)
+    // RELAXED: Allow markets that have team win outcomes, even if they also have spreads/totals
     const isTeamWinMarket = (market: MarketResult): boolean => {
       const title = (market.title || '').toLowerCase();
       const outcomes = market.outcomes || [];
       
-      // Exclude markets with prop keywords
-      const propKeywords = ['player', 'yards', 'touchdowns', 'points', 'rebounds', 'assists', 'goals', 'saves', 'over', 'under', 'spread'];
+      // Exclude markets with prop keywords in title (but allow if it's just the game title)
+      const propKeywords = ['player', 'yards', 'touchdowns', 'rebounds', 'assists', 'goals', 'saves'];
       if (propKeywords.some(keyword => title.includes(keyword))) {
         return false;
       }
       
-      // Exclude outcomes with numbers (e.g., "80+", "Over 45.5")
+      // For Polymarket: If it has a team vs team outcome (like "Ravens vs. Packers"), allow it
+      // even if it also has spreads/totals
+      const hasTeamWinOutcome = outcomes.some(o => {
+        const outcomeName = (o.name || '').toLowerCase();
+        // Check if outcome looks like a team name (not a number/spread)
+        // Allow team names, Yes/No, or outcomes without numbers/spread keywords
+        return !/\d/.test(outcomeName) && 
+               !outcomeName.includes('spread') && 
+               !outcomeName.includes('over') && 
+               !outcomeName.includes('under') &&
+               !outcomeName.includes('o/u');
+      });
+      
+      if (hasTeamWinOutcome) {
+        return true;
+      }
+      
+      // Exclude outcomes with numbers (e.g., "80+", "Over 45.5") - but only if NO team win outcomes exist
       if (outcomes.some(o => /\d/.test(o.name))) {
         return false;
       }
@@ -781,8 +799,12 @@ async function findArbitrageForSport(
             pairsChecked++;
             
             // Check if outcomes are opposing
-            const kTeam = extractTeamFromOutcome(kOutcome.name, kalshiMarket.title);
-            const pTeam = extractTeamFromOutcome(pOutcome.name, polyMarket.title);
+            // Pass event teams to help extractTeamFromOutcome determine the correct team
+            // For Kalshi "Yes" on single-team questions, we need to know both teams to find the "other" team
+            // Also pass the outcome object itself which may contain teamName from yes_sub_title
+            const sigTeams = signature.split('-').slice(0, 2);
+            const kTeam = extractTeamFromOutcome(kOutcome.name, kalshiMarket.title, sigTeams, kOutcome);
+            const pTeam = extractTeamFromOutcome(pOutcome.name, polyMarket.title, sigTeams, pOutcome);
             
             // Log first few pairs for debugging
             if (pairsChecked <= 5 && eventsWithBothPlatforms <= 2) {
@@ -790,24 +812,49 @@ async function findArbitrageForSport(
               console.log(`    Teams extracted: Kalshi=${kTeam || 'NONE'}, Polymarket=${pTeam || 'NONE'}`);
             }
             
-            // Must be different teams
-            if (kTeam === pTeam || !kTeam || !pTeam) {
-              if (!kTeam || !pTeam) {
-                skippedNoTeam++;
-              } else {
-                skippedSameTeam++;
-              }
-              continue;
-            }
+            // RELAXED MATCHING: Since we're in the same event group (same signature),
+            // we'll allow matches even if team extraction is imperfect.
+            // We'll still validate when possible, but won't reject everything.
             
-            // Check if teams match the event signature
-            const sigTeams = signature.split('-').slice(0, 2);
-            if (!sigTeams.includes(kTeam) || !sigTeams.includes(pTeam)) {
-              skippedTeamMismatch++;
-              if (pairsChecked <= 5 && eventsWithBothPlatforms <= 2) {
-                console.log(`    ✗ Team mismatch: sigTeams=[${sigTeams.join(', ')}], kTeam=${kTeam}, pTeam=${pTeam}`);
+            // If we extracted teams successfully, do basic validation
+            if (kTeam && pTeam) {
+              // Skip if both outcomes represent the same team
+              if (kTeam.toLowerCase().trim() === pTeam.toLowerCase().trim()) {
+                skippedSameTeam++;
+                continue;
               }
-              continue;
+              
+              // Try to validate against signature, but don't be too strict
+              const normalizedSigTeams = sigTeams.map(t => t.toLowerCase().trim());
+              const normalizedKTeam = kTeam.toLowerCase().trim();
+              const normalizedPTeam = pTeam.toLowerCase().trim();
+              
+              const kTeamMatches = normalizedSigTeams.some(sigTeam => 
+                normalizedKTeam === sigTeam || 
+                normalizedKTeam.includes(sigTeam) || 
+                sigTeam.includes(normalizedKTeam)
+              );
+              const pTeamMatches = normalizedSigTeams.some(sigTeam => 
+                normalizedPTeam === sigTeam || 
+                normalizedPTeam.includes(sigTeam) || 
+                sigTeam.includes(normalizedPTeam)
+              );
+              
+              // If teams match signature, great. If not, still allow it since we're in same event group
+              if (!kTeamMatches || !pTeamMatches) {
+                // Log but continue - team extraction might be imperfect but markets are for same game
+                if (pairsChecked <= 10 && eventsWithBothPlatforms <= 3) {
+                  console.log(`    ⚠ Team validation weak but allowing (same event): sigTeams=[${sigTeams.join(', ')}], kTeam=${kTeam}, pTeam=${pTeam}`);
+                }
+              }
+            } else if (!kTeam || !pTeam) {
+              // Couldn't extract one or both teams, but markets are in same event group
+              // Allow it - they're already grouped by the same teams/date
+              skippedNoTeam++;
+              if (pairsChecked <= 10 && eventsWithBothPlatforms <= 3) {
+                console.log(`    ⚠ No team extracted but allowing (same event): kTeam=${kTeam || 'NONE'}, pTeam=${pTeam || 'NONE'}`);
+              }
+              // Continue to allow the match
             }
             
             // Calculate arbitrage
