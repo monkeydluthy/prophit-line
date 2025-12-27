@@ -24,3 +24,4 @@ create index if not exists market_snapshots_platform_idx
 
 
 
+

@@ -1,6 +1,9 @@
 [functions."snapshot-collector"]
   schedule = "0 * * * *"
 
+[functions."cleanup-snapshots"]
+  schedule = "0 2 * * *"  # Run daily at 2 AM UTC
+
 
 
 
