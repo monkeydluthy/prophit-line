@@ -11,12 +11,15 @@ export const maxDuration = 120; // Request 2 minutes (120 seconds) - may need Ne
 export const runtime = 'nodejs'; // Use Node.js runtime
 
 export async function GET(request: Request) {
+  const startTime = Date.now();
   const { searchParams } = new URL(request.url);
   const limit = parseInt(searchParams.get('limit') || '200');
   const minSpread = parseFloat(searchParams.get('minSpread') || '0.01');
   const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
   
   try {
+    console.log(`[API] Starting arbitrage request: source=${source}, limit=${limit}, minSpread=${minSpread}`);
+    
     let opportunities;
     
     if (source === 'sports') {
@@ -24,7 +27,10 @@ export async function GET(request: Request) {
       // For sports arbitrage, use a higher limit to find more matches
       const sportsLimit = Math.max(limit, 2000);
       console.log(`[API] Calling findSportsArbitrage with limit=${sportsLimit}, minSpread=${minSpread}`);
+      
       opportunities = await findSportsArbitrage(sportsLimit, minSpread);
+      
+      console.log(`[API] findSportsArbitrage completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
     } else if (source === 'matchr') {
       // Use Matchr's API directly
       try {
@@ -76,13 +82,15 @@ export async function GET(request: Request) {
     });
     
     console.log(`  After filtering: ${filtered.length}`);
-    console.log(`\n🔍 API: Returning ${filtered.length} opportunities to frontend\n`);
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`\n🔍 API: Returning ${filtered.length} opportunities to frontend (total time: ${totalTime}s)\n`);
     
     return NextResponse.json({
       opportunities: filtered,
       count: filtered.length,
       source: source,
       timestamp: Date.now(),
+      executionTime: totalTime,
     });
   } catch (error) {
     console.error('[API] Error fetching arbitrage opportunities:', error);
