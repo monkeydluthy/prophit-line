@@ -4,6 +4,10 @@
 [functions."cleanup-snapshots"]
   schedule = "0 2 * * *"  # Run daily at 2 AM UTC
 
+# Configure Next.js API routes timeout
+# Note: Next.js routes on Netlify use the Next.js runtime, which respects maxDuration export
+# Standard Netlify functions have 10s timeout, but Next.js routes can be configured differently
+
 
 
 

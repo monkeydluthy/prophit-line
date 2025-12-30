@@ -5,7 +5,9 @@ import { getMatchrOpportunities, convertMatchrToOpportunity } from '@/app/servic
 import { findSportsArbitrage } from '@/app/services/sportsArbitrageService';
 
 // Configure route for longer execution time
-export const maxDuration = 26; // Maximum duration for serverless function (26s for Netlify Pro, 10s for free tier)
+// Note: On Netlify with Next.js, this may be handled differently
+// If this doesn't work, we may need to use background functions or increase Netlify plan limits
+export const maxDuration = 120; // Request 2 minutes (120 seconds) - may need Netlify Enterprise for this
 export const runtime = 'nodejs'; // Use Node.js runtime
 
 export async function GET(request: Request) {
@@ -19,8 +21,8 @@ export async function GET(request: Request) {
     
     if (source === 'sports') {
       // Use new sports arbitrage service (event-based, opposing outcomes)
-      // Reduce limit for production to avoid timeouts (serverless functions have ~10-26s timeout)
-      const sportsLimit = Math.min(Math.max(limit, 500), 1000); // Cap at 1000 to prevent timeouts
+      // For sports arbitrage, use a higher limit to find more matches
+      const sportsLimit = Math.max(limit, 2000);
       console.log(`[API] Calling findSportsArbitrage with limit=${sportsLimit}, minSpread=${minSpread}`);
       opportunities = await findSportsArbitrage(sportsLimit, minSpread);
     } else if (source === 'matchr') {
