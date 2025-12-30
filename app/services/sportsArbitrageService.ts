@@ -421,14 +421,14 @@ async function findArbitrageForSport(
         'pacers': 'ind', 'bucks': 'mil', 'hawks': 'atl', 'hornets': 'cha',
         'heat': 'mia', 'magic': 'orl', 'wizards': 'was', 'nuggets': 'den',
         'timberwolves': 'min', 'jazz': 'utah',
-        // NHL
-        'bruins': 'bos', 'sabres': 'buf', 'red wings': 'det', 'panthers': 'fla',
+        // NHL (removed duplicates: panthers, kings, jets, stars conflict with NFL/NBA)
+        'bruins': 'bos', 'sabres': 'buf', 'red wings': 'det',
         'canadiens': 'mtl', 'senators': 'ott', 'lightning': 'tb', 'maple leafs': 'tor',
         'hurricanes': 'car', 'blue jackets': 'cbj', 'devils': 'nj', 'islanders': 'nyi',
         'rangers': 'nyr', 'flyers': 'phi', 'penguins': 'pit', 'capitals': 'was',
-        'blackhawks': 'chi', 'avalanche': 'col', 'stars': 'dal', 'wild': 'min',
-        'predators': 'nsh', 'blues': 'stl', 'jets': 'wpg', 'ducks': 'ana',
-        'coyotes': 'ari', 'flames': 'cgy', 'oilers': 'edm', 'kings': 'la',
+        'blackhawks': 'chi', 'avalanche': 'col', 'wild': 'min',
+        'predators': 'nsh', 'blues': 'stl', 'ducks': 'ana',
+        'coyotes': 'ari', 'flames': 'cgy', 'oilers': 'edm',
         'sharks': 'sj', 'canucks': 'van', 'golden knights': 'vgk', 'kraken': 'sea',
       };
       
@@ -585,14 +585,14 @@ async function findArbitrageForSport(
             'pacers': 'ind', 'bucks': 'mil', 'hawks': 'atl', 'hornets': 'cha',
             'heat': 'mia', 'magic': 'orl', 'wizards': 'was', 'nuggets': 'den',
             'timberwolves': 'min', 'jazz': 'utah',
-            // NHL
-            'bruins': 'bos', 'sabres': 'buf', 'red wings': 'det', 'panthers': 'fla',
+            // NHL (removed duplicates: panthers, kings, jets, stars conflict with NFL/NBA)
+            'bruins': 'bos', 'sabres': 'buf', 'red wings': 'det',
             'canadiens': 'mtl', 'senators': 'ott', 'lightning': 'tb', 'maple leafs': 'tor',
             'hurricanes': 'car', 'blue jackets': 'cbj', 'devils': 'nj', 'islanders': 'nyi',
             'rangers': 'nyr', 'flyers': 'phi', 'penguins': 'pit', 'capitals': 'was',
-            'blackhawks': 'chi', 'avalanche': 'col', 'stars': 'dal', 'wild': 'min',
-            'predators': 'nsh', 'blues': 'stl', 'jets': 'wpg', 'ducks': 'ana',
-            'coyotes': 'ari', 'flames': 'cgy', 'oilers': 'edm', 'kings': 'la',
+            'blackhawks': 'chi', 'avalanche': 'col', 'wild': 'min',
+            'predators': 'nsh', 'blues': 'stl', 'ducks': 'ana',
+            'coyotes': 'ari', 'flames': 'cgy', 'oilers': 'edm',
             'sharks': 'sj', 'canucks': 'van', 'golden knights': 'vgk', 'kraken': 'sea',
           };
           

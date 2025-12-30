@@ -42,7 +42,6 @@ const TEAM_NICKNAMES: Record<string, string> = {
   titans: 'titans',
   commanders: 'commanders',
   panthers: 'panthers',
-  cardinals: 'cardinals',
   steelers: 'steelers',
   browns: 'browns',
   // NBA
@@ -84,8 +83,7 @@ const TEAM_NICKNAMES: Record<string, string> = {
   avalanche: 'avalanche',
   bruins: 'bruins',
   blackhawks: 'blackhawks',
-  hurricanes: 'hurricanes',
-  canes: 'hurricanes',
+  canes: 'canes',
   blues: 'blues',
   'blue jackets': 'blue jackets',
   capitals: 'capitals',
@@ -108,7 +106,6 @@ const TEAM_NICKNAMES: Record<string, string> = {
   sharks: 'sharks',
   wild: 'wild',
   stars: 'stars',
-  ducks: 'ducks',
   sabres: 'sabres',
   devils: 'devils',
   senators: 'senators',
@@ -119,13 +116,10 @@ const TEAM_NICKNAMES: Record<string, string> = {
   // College Football (Major Programs)
   'crimson tide': 'alabama',
   tide: 'alabama',
-  tigers: 'clemson', // Context-dependent, but common
   'fighting irish': 'notre dame',
-  buckeyes: 'ohio state',
   wolverines: 'michigan',
   bulldogs: 'georgia', // Context-dependent
   'longhorns': 'texas',
-  gators: 'florida',
   'trojans': 'usc',
   'trojan': 'usc',
   'sooners': 'oklahoma',
@@ -154,7 +148,6 @@ const TEAM_NICKNAMES: Record<string, string> = {
   'gators': 'florida',
   'volunteers': 'tennessee',
   'aggies': 'texas a&m',
-  'crimson tide': 'alabama',
   'buckeyes': 'ohio state',
 };
 
@@ -266,11 +259,8 @@ const CITY_TO_TEAM: Record<string, string> = {
   'wisconsin': 'badgers',
   'florida state': 'seminoles',
   'oregon': 'ducks',
-  'miami': 'hurricanes',
-  'washington': 'huskies',
   'kentucky': 'wildcats',
   'louisville': 'cardinals',
-  'cincinnati': 'bearcats',
   'michigan state': 'spartans',
   'penn state': 'nittany lions',
   'iowa': 'hawkeyes',
@@ -282,7 +272,6 @@ const CITY_TO_TEAM: Record<string, string> = {
   'purdue': 'boilermakers',
   'arkansas': 'razorbacks',
   'auburn': 'tigers',
-  'tennessee': 'volunteers',
   'texas a&m': 'aggies',
 };
 
@@ -469,7 +458,7 @@ export function extractDate(text: string): string | null {
   const monthNames: Record<string, string> = {
     january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
     july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
-    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jan: '01', feb: '02', mar: '03', apr: '04', jun: '06',
     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
   };
   const monthMatch = lower.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)\s+(\d{1,2})(?:,?\s+(\d{4}))?\b/);
