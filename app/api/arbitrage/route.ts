@@ -40,7 +40,8 @@ export async function GET(request: Request) {
       
       try {
         const sportsStartTime = Date.now();
-        opportunities = await findSportsArbitrage(sportsLimit, minSpread);
+        // Pass max execution time (25 seconds to leave 5 seconds for response)
+        opportunities = await findSportsArbitrage(sportsLimit, minSpread, 25000);
         const sportsDuration = ((Date.now() - sportsStartTime) / 1000).toFixed(2);
         
         // Ensure opportunities is always an array

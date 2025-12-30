@@ -84,25 +84,43 @@ function calculateArbitrage(
  */
 export async function findSportsArbitrage(
   limit: number = 200,
-  minSpread: number = 0.01 // Minimum spread % to consider (lowered to show more opportunities, even small ones)
+  minSpread: number = 0.01, // Minimum spread % to consider (lowered to show more opportunities, even small ones)
+  maxExecutionTime: number = 25000 // Maximum execution time in ms (25 seconds to leave buffer for response)
 ): Promise<ArbitrageOpportunity[]> {
-  console.log(`[SportsArb] Starting sport-by-sport arbitrage search (limit: ${limit})...`);
+  const startTime = Date.now();
+  console.log(`[SportsArb] Starting sport-by-sport arbitrage search (limit: ${limit}, maxTime: ${maxExecutionTime}ms)...`);
   
   // Define sports to check (in priority order)
   const sports = ['nfl', 'nba', 'nhl', 'cbb', 'cfb'] as const;
   
   const allOpportunities: ArbitrageOpportunity[] = [];
   
-  // Process each sport separately
+  // Process each sport separately with timeout protection
   for (const sport of sports) {
-    console.log(`\n[SportsArb] ===== Processing ${sport.toUpperCase()} =====`);
-    const opportunities = await findArbitrageForSport(sport, limit, minSpread);
-    allOpportunities.push(...opportunities);
-    console.log(`[SportsArb] Found ${opportunities.length} ${sport.toUpperCase()} opportunities`);
+    // Check if we're running out of time
+    const elapsed = Date.now() - startTime;
+    if (elapsed > maxExecutionTime) {
+      console.log(`[SportsArb] ⚠ Time limit reached (${elapsed}ms > ${maxExecutionTime}ms), stopping early`);
+      console.log(`[SportsArb] Returning ${allOpportunities.length} opportunities from ${sports.indexOf(sport)} sports processed`);
+      break;
+    }
+    
+    const remainingTime = maxExecutionTime - elapsed;
+    console.log(`\n[SportsArb] ===== Processing ${sport.toUpperCase()} (${remainingTime.toFixed(0)}ms remaining) =====`);
+    
+    try {
+      const opportunities = await findArbitrageForSport(sport, limit, minSpread);
+      allOpportunities.push(...opportunities);
+      console.log(`[SportsArb] Found ${opportunities.length} ${sport.toUpperCase()} opportunities`);
+    } catch (error) {
+      console.error(`[SportsArb] Error processing ${sport.toUpperCase()}:`, error);
+      // Continue with next sport instead of failing completely
+    }
   }
   
   console.log(`\n[SportsArb] ===== SUMMARY =====`);
   console.log(`[SportsArb] Total opportunities found: ${allOpportunities.length}`);
+  console.log(`[SportsArb] Total execution time: ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
   
   return allOpportunities;
 }
