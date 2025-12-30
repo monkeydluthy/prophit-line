@@ -10,6 +10,13 @@ import { findSportsArbitrage } from '@/app/services/sportsArbitrageService';
 export const maxDuration = 120; // Request 2 minutes (120 seconds) - may need Netlify Enterprise for this
 export const runtime = 'nodejs'; // Use Node.js runtime
 
+// Catch unhandled promise rejections to prevent crashes
+if (typeof process !== 'undefined') {
+  process.on('unhandledRejection', (reason, promise) => {
+    console.error('[API] Unhandled Rejection at:', promise, 'reason:', reason);
+  });
+}
+
 export async function GET(request: Request) {
   const startTime = Date.now();
   const { searchParams } = new URL(request.url);
@@ -28,9 +35,22 @@ export async function GET(request: Request) {
       const sportsLimit = Math.max(limit, 2000);
       console.log(`[API] Calling findSportsArbitrage with limit=${sportsLimit}, minSpread=${minSpread}`);
       
-      opportunities = await findSportsArbitrage(sportsLimit, minSpread);
-      
-      console.log(`[API] findSportsArbitrage completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s`);
+      try {
+        opportunities = await findSportsArbitrage(sportsLimit, minSpread);
+        
+        // Ensure opportunities is always an array
+        if (!Array.isArray(opportunities)) {
+          console.error('[API] findSportsArbitrage returned non-array:', typeof opportunities);
+          opportunities = [];
+        }
+        
+        console.log(`[API] findSportsArbitrage completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s, returned ${opportunities.length} opportunities`);
+      } catch (sportsError) {
+        console.error('[API] Error in findSportsArbitrage:', sportsError);
+        // Return empty array instead of crashing
+        opportunities = [];
+        throw sportsError; // Re-throw to be caught by outer catch
+      }
     } else if (source === 'matchr') {
       // Use Matchr's API directly
       try {
@@ -55,6 +75,12 @@ export async function GET(request: Request) {
     } else {
       // Use our structured matching system (legacy)
       opportunities = await findArbitrageOpportunities(limit);
+    }
+    
+    // Ensure opportunities is always an array
+    if (!Array.isArray(opportunities)) {
+      console.error('[API] Opportunities is not an array:', typeof opportunities, opportunities);
+      opportunities = [];
     }
     
     // Debug: Log what we received from the service
@@ -85,13 +111,18 @@ export async function GET(request: Request) {
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n🔍 API: Returning ${filtered.length} opportunities to frontend (total time: ${totalTime}s)\n`);
     
-    return NextResponse.json({
-      opportunities: filtered,
-      count: filtered.length,
+    // Ensure we always return a valid JSON response
+    const response = {
+      opportunities: Array.isArray(filtered) ? filtered : [],
+      count: Array.isArray(filtered) ? filtered.length : 0,
       source: source,
       timestamp: Date.now(),
       executionTime: totalTime,
-    });
+    };
+    
+    console.log(`[API] Response size: ${JSON.stringify(response).length} bytes`);
+    
+    return NextResponse.json(response);
   } catch (error) {
     console.error('[API] Error fetching arbitrage opportunities:', error);
     
@@ -107,16 +138,34 @@ export async function GET(request: Request) {
       minSpread,
     });
     
-    // Return more detailed error response
-    return NextResponse.json(
-      { 
-        error: 'Failed to fetch arbitrage opportunities',
-        errorType: error instanceof Error ? error.constructor.name : 'Error',
-        errorMessage: errorMessage,
-        source,
-      },
-      { status: 500 }
-    );
+    // Always return a valid JSON response, even on error
+    try {
+      return NextResponse.json(
+        { 
+          error: 'Failed to fetch arbitrage opportunities',
+          errorType: error instanceof Error ? error.constructor.name : 'Error',
+          errorMessage: errorMessage,
+          source,
+          opportunities: [], // Always include opportunities array
+          count: 0,
+        },
+        { status: 500 }
+      );
+    } catch (jsonError) {
+      // If even JSON serialization fails, return minimal response
+      console.error('[API] Failed to serialize error response:', jsonError);
+      return new NextResponse(
+        JSON.stringify({ 
+          error: 'An unknown error has occurred',
+          opportunities: [],
+          count: 0,
+        }),
+        { 
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
   }
 }
 
