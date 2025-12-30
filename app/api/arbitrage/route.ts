@@ -4,19 +4,24 @@ import { findArbitrageWithEmbeddings } from '@/app/services/embeddingArbitrageSe
 import { getMatchrOpportunities, convertMatchrToOpportunity } from '@/app/services/matchrService';
 import { findSportsArbitrage } from '@/app/services/sportsArbitrageService';
 
+// Configure route for longer execution time
+export const maxDuration = 26; // Maximum duration for serverless function (26s for Netlify Pro, 10s for free tier)
+export const runtime = 'nodejs'; // Use Node.js runtime
+
 export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const limit = parseInt(searchParams.get('limit') || '200');
+  const minSpread = parseFloat(searchParams.get('minSpread') || '0.01');
+  const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
+  
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '200');
-    const minSpread = parseFloat(searchParams.get('minSpread') || '0.01');
-    const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
-    
     let opportunities;
     
     if (source === 'sports') {
       // Use new sports arbitrage service (event-based, opposing outcomes)
-      // For sports arbitrage, use a higher limit to find more matches
-      const sportsLimit = Math.max(limit, 2000);
+      // Reduce limit for production to avoid timeouts (serverless functions have ~10-26s timeout)
+      const sportsLimit = Math.min(Math.max(limit, 500), 1000); // Cap at 1000 to prevent timeouts
+      console.log(`[API] Calling findSportsArbitrage with limit=${sportsLimit}, minSpread=${minSpread}`);
       opportunities = await findSportsArbitrage(sportsLimit, minSpread);
     } else if (source === 'matchr') {
       // Use Matchr's API directly
@@ -78,9 +83,28 @@ export async function GET(request: Request) {
       timestamp: Date.now(),
     });
   } catch (error) {
-    console.error('Error fetching arbitrage opportunities:', error);
+    console.error('[API] Error fetching arbitrage opportunities:', error);
+    
+    // Provide more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('[API] Error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      source,
+      limit,
+      minSpread,
+    });
+    
+    // Return more detailed error response
     return NextResponse.json(
-      { error: 'Failed to fetch arbitrage opportunities' },
+      { 
+        error: 'Failed to fetch arbitrage opportunities',
+        errorType: error instanceof Error ? error.constructor.name : 'Error',
+        errorMessage: errorMessage,
+        source,
+      },
       { status: 500 }
     );
   }
