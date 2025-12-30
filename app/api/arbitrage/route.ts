@@ -25,7 +25,9 @@ export async function GET(request: Request) {
   const source = searchParams.get('source') || 'sports'; // 'sports', 'embeddings', 'structured', or 'matchr'
   
   try {
-    console.log(`[API] Starting arbitrage request: source=${source}, limit=${limit}, minSpread=${minSpread}`);
+    console.log(`[API] ===== STARTING ARBITRAGE REQUEST =====`);
+    console.log(`[API] source=${source}, limit=${limit}, minSpread=${minSpread}`);
+    console.log(`[API] Request URL: ${request.url}`);
     
     let opportunities;
     
@@ -33,20 +35,27 @@ export async function GET(request: Request) {
       // Use new sports arbitrage service (event-based, opposing outcomes)
       // For sports arbitrage, use a higher limit to find more matches
       const sportsLimit = Math.max(limit, 2000);
-      console.log(`[API] Calling findSportsArbitrage with limit=${sportsLimit}, minSpread=${minSpread}`);
+      console.log(`[API] ===== CALLING findSportsArbitrage =====`);
+      console.log(`[API] limit=${sportsLimit}, minSpread=${minSpread}`);
       
       try {
+        const sportsStartTime = Date.now();
         opportunities = await findSportsArbitrage(sportsLimit, minSpread);
+        const sportsDuration = ((Date.now() - sportsStartTime) / 1000).toFixed(2);
         
         // Ensure opportunities is always an array
         if (!Array.isArray(opportunities)) {
-          console.error('[API] findSportsArbitrage returned non-array:', typeof opportunities);
+          console.error('[API] ERROR: findSportsArbitrage returned non-array:', typeof opportunities, opportunities);
           opportunities = [];
         }
         
-        console.log(`[API] findSportsArbitrage completed in ${((Date.now() - startTime) / 1000).toFixed(2)}s, returned ${opportunities.length} opportunities`);
+        console.log(`[API] ===== findSportsArbitrage COMPLETED =====`);
+        console.log(`[API] Duration: ${sportsDuration}s, Opportunities: ${opportunities.length}`);
       } catch (sportsError) {
-        console.error('[API] Error in findSportsArbitrage:', sportsError);
+        console.error('[API] ===== ERROR in findSportsArbitrage =====');
+        console.error('[API] Error type:', sportsError instanceof Error ? sportsError.constructor.name : typeof sportsError);
+        console.error('[API] Error message:', sportsError instanceof Error ? sportsError.message : String(sportsError));
+        console.error('[API] Error stack:', sportsError instanceof Error ? sportsError.stack : 'No stack');
         // Return empty array instead of crashing
         opportunities = [];
         throw sportsError; // Re-throw to be caught by outer catch
@@ -109,7 +118,7 @@ export async function GET(request: Request) {
     
     console.log(`  After filtering: ${filtered.length}`);
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`\n🔍 API: Returning ${filtered.length} opportunities to frontend (total time: ${totalTime}s)\n`);
+    console.log(`\n🔍 API: Preparing response (total time: ${totalTime}s)\n`);
     
     // Ensure we always return a valid JSON response
     const response = {
@@ -120,9 +129,21 @@ export async function GET(request: Request) {
       executionTime: totalTime,
     };
     
-    console.log(`[API] Response size: ${JSON.stringify(response).length} bytes`);
+    // Check response size before serialization
+    const responseString = JSON.stringify(response);
+    const responseSize = responseString.length;
+    console.log(`[API] Response size: ${responseSize} bytes (${(responseSize / 1024).toFixed(2)} KB)`);
     
-    return NextResponse.json(response);
+    // Netlify has a 6MB response limit, warn if approaching
+    if (responseSize > 5 * 1024 * 1024) {
+      console.warn(`[API] WARNING: Response size (${(responseSize / 1024 / 1024).toFixed(2)} MB) approaching Netlify's 6MB limit`);
+    }
+    
+    console.log(`[API] ===== SENDING RESPONSE =====`);
+    const jsonResponse = NextResponse.json(response);
+    console.log(`[API] Response created successfully`);
+    
+    return jsonResponse;
   } catch (error) {
     console.error('[API] Error fetching arbitrage opportunities:', error);
     

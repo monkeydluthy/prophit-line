@@ -78,9 +78,10 @@ export async function getPolymarketEventsBySport(
     // Adaptive approach: Search through pages to find where game events are
     // Games are sorted by volume, so they may be at offset 2000+ (page 5+)
     // We'll keep fetching until we find games, then continue a few more pages to get them all
+    // REDUCED for performance - was causing 30s timeouts on Netlify
     const allEvents: any[] = [];
-    const maxPages = 15; // Maximum pages to search (7500 events)
-    const maxPagesWithoutGames = 3; // Stop after 3 consecutive pages with no games
+    const maxPages = 5; // Maximum pages to search (2500 events) - reduced from 15 to prevent timeouts
+    const maxPagesWithoutGames = 2; // Stop after 2 consecutive pages with no games (reduced from 3)
     
     // Regex to identify game events (e.g., nfl-la-sea-2025-12-18, nba-lac-okc-2025-12-17)
     // Define outside loop so it's accessible for counting later
@@ -90,7 +91,17 @@ export async function getPolymarketEventsBySport(
     let foundGames = false;
     let pagesFetched = 0;
     
+    // Add timeout protection for fallback (10 seconds max for all pages)
+    const fallbackStartTime = Date.now();
+    const FALLBACK_TIMEOUT = 10000; // 10 seconds max for fallback
+    
     for (let page = 0; page < maxPages; page++) {
+      // Check timeout before each page
+      if (Date.now() - fallbackStartTime > FALLBACK_TIMEOUT) {
+        console.log(`[Polymarket] Fallback timeout reached after ${page} pages, stopping`);
+        break;
+      }
+      
       const params = new URLSearchParams({
         limit: '500',
         active: 'true',
@@ -103,10 +114,19 @@ export async function getPolymarketEventsBySport(
       }
       
       try {
+        // Add timeout to individual fetch (5 seconds per page)
+        const fetchController = new AbortController();
+        const fetchTimeout = setTimeout(() => fetchController.abort(), 5000);
+        
         const response = await fetch(
           `${API_URL}/events/pagination?${params.toString()}`,
-          { cache: 'no-store' }
+          { 
+            cache: 'no-store',
+            signal: fetchController.signal
+          }
         );
+        
+        clearTimeout(fetchTimeout);
         
         if (!response.ok) {
           if (page === 0) {
@@ -150,7 +170,12 @@ export async function getPolymarketEventsBySport(
         if (pageEvents.length < 500) {
           break;
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Handle timeout/abort errors gracefully
+        if (error?.name === 'AbortError' || error?.message?.includes('timeout')) {
+          console.log(`[Polymarket] Page ${page} fetch timeout, stopping fallback`);
+          break;
+        }
         console.error(`Polymarket getEventsBySport page ${page} error:`, error);
         if (page === 0) return [];
         break;
