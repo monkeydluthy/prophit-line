@@ -96,3 +96,4 @@ SELECT * FROM cleanup_old_market_snapshots(20);
 - Runs with SECURITY DEFINER so it has proper permissions
 - Safe to run multiple times (idempotent)
 
+

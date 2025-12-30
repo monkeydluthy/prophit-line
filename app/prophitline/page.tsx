@@ -6,34 +6,7 @@ import Image from 'next/image';
 import { parseVolume } from '@/app/services/marketService';
 import ArbitrageCalculator from '@/app/components/ArbitrageCalculator';
 import { extractTeamFromOutcome } from '@/app/services/eventExtraction';
-
-interface ArbitrageOpportunity {
-  id: string;
-  markets: Array<{
-    id: string;
-    platform: string;
-    title: string;
-    volume: number | string;
-    link: string;
-  }>;
-  spread: number;
-  maxSpread: number;
-  bestBuy: {
-    market: any;
-    price: number;
-    platform: string;
-    outcomeIndex?: number; // Index of the matched outcome
-  };
-  bestSell: {
-    market: any;
-    price: number;
-    platform: string;
-    outcomeIndex?: number; // Index of the matched outcome
-  };
-  totalVolume: number;
-  avgLiquidity: number;
-  title: string;
-}
+import type { ArbitrageOpportunity } from '@/app/services/arbitrageService';
 
 export default function ProphitLinePage() {
   const router = useRouter();

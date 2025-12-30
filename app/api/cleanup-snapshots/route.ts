@@ -93,3 +93,4 @@ export async function GET(request: NextRequest) {
 // Also support POST for cron services that prefer POST
 export const POST = GET;
 
+

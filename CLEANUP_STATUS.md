@@ -61,3 +61,4 @@ SELECT
 FROM public.market_snapshots;
 ```
 
+

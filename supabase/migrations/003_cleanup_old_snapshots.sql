@@ -44,3 +44,4 @@ WHERE data IS NOT NULL;
 --   pg_size_pretty(pg_relation_size('public.market_snapshots')) as table_size,
 --   pg_size_pretty(pg_total_relation_size('public.market_snapshots') - pg_relation_size('public.market_snapshots')) as indexes_size;
 
+
